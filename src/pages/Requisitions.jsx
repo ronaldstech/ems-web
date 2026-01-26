@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Plus, X, Search, CheckCircle, XCircle, Clock, FileText, Ban, Check } from 'lucide-react';
+import { Plus, X, Search, CheckCircle, XCircle, Clock, FileText, Ban, Check, DollarSign, Plane, Wallet, Package, Wrench, Monitor, GraduationCap } from 'lucide-react';
 
 const StatusBadge = ({ status }) => {
     const styles = {
@@ -61,6 +61,13 @@ const RequisitionCard = ({ req, role, user, onEdit, onAction }) => {
             case 'leave request': return <Clock size={16} />;
             case 'purchase requisition': return <FileText size={16} />;
             case 'expense claim': return <CheckCircle size={16} />;
+            case 'advance salary': return <DollarSign size={16} />;
+            case 'travel request': return <Plane size={16} />;
+            case 'petty cash': return <Wallet size={16} />;
+            case 'office supplies': return <Package size={16} />;
+            case 'maintenance': return <Wrench size={16} />;
+            case 'it support': return <Monitor size={16} />;
+            case 'training request': return <GraduationCap size={16} />;
             default: return <FileText size={16} />;
         }
     };
@@ -121,7 +128,7 @@ const RequisitionCard = ({ req, role, user, onEdit, onAction }) => {
                 <div>
                     <p style={{ margin: '0 0 4px 0', fontSize: '0.7rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase' }}>Amount</p>
                     <p style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#1e293b' }}>
-                        {req.amount ? `Ksh ${parseInt(req.amount).toLocaleString()}` : '—'}
+                        {req.amount ? `MWK ${parseInt(req.amount).toLocaleString()}` : '—'}
                     </p>
                 </div>
                 <div>
@@ -304,16 +311,16 @@ const Requisitions = () => {
     };
 
     return (
-        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0.5rem 1.25rem' }}>
+        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0.5rem 0.25rem' }}>
             {/* Optimized Header Section */}
             <header style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 flexWrap: 'wrap',
-                gap: '1.5rem',
-                marginBottom: '2.5rem',
-                padding: '1.5rem 0',
+                gap: '0.5rem',
+                marginBottom: '0.5rem',
+                padding: '0.5rem 0',
                 borderBottom: '1px solid rgba(0,0,0,0.05)'
             }}>
                 <div style={{ flex: '1 1 300px' }}>
@@ -376,7 +383,7 @@ const Requisitions = () => {
                 gap: '1.25rem',
                 alignItems: 'center',
                 marginBottom: '2.5rem',
-                padding: '1.5rem',
+                padding: '0.5rem',
                 background: 'rgba(255,255,255,0.6)',
                 borderRadius: '24px',
                 border: '1px solid rgba(255,255,255,0.8)',
@@ -388,7 +395,7 @@ const Requisitions = () => {
                     border: '1px solid #e2e8f0',
                     flex: '1 1 400px',
                     minWidth: '280px',
-                    padding: '0.75rem 1.25rem',
+                    padding: '0.75rem 0.75rem',
                     borderRadius: '16px',
                     display: 'flex',
                     alignItems: 'center'
@@ -526,13 +533,20 @@ const Requisitions = () => {
                                         <option>Purchase Requisition</option>
                                         <option>Leave Request</option>
                                         <option>Expense Claim</option>
+                                        <option>Advance Salary</option>
+                                        <option>Travel Request</option>
+                                        <option>Petty Cash</option>
+                                        <option>Office Supplies</option>
+                                        <option>Maintenance</option>
+                                        <option>IT Support</option>
+                                        <option>Training Request</option>
                                         <option>Other</option>
                                     </select>
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>Estimated Amount</label>
                                     <div style={{ position: 'relative' }}>
-                                        <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: '#94a3b8' }}>Ksh</div>
+                                        <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: '#94a3b8' }}>MK</div>
                                         <input
                                             type="number"
                                             value={formData.amount}
