@@ -5,52 +5,211 @@ import { Plus, X, Search, CheckCircle, XCircle, Clock, FileText, Ban, Check } fr
 const StatusBadge = ({ status }) => {
     const styles = {
         pending_leader: {
-            bg: 'rgba(59,130,246,0.1)',
-            color: '#1d4ed8',
-            border: 'rgba(59,130,246,0.2)'
+            bg: 'hsl(214, 100%, 97%)',
+            color: 'hsl(214, 95%, 45%)',
+            border: 'hsl(214, 90%, 90%)',
+            label: 'Pending Leader'
         },
         pending_manager: {
-            bg: 'rgba(245,158,11,0.1)',
-            color: '#b45309',
-            border: 'rgba(245,158,11,0.2)'
+            bg: 'hsl(35, 100%, 97%)',
+            color: 'hsl(35, 90%, 45%)',
+            border: 'hsl(35, 90%, 90%)',
+            label: 'Pending Manager'
         },
         approved: {
-            bg: 'rgba(34,197,94,0.1)',
-            color: '#15803d',
-            border: 'rgba(34,197,94,0.2)'
+            bg: 'hsl(142, 70%, 97%)',
+            color: 'hsl(142, 72%, 29%)',
+            border: 'hsl(142, 70%, 90%)',
+            label: 'Approved'
         },
         rejected: {
-            bg: 'rgba(239,68,68,0.1)',
-            color: '#b91c1c',
-            border: 'rgba(239,68,68,0.2)'
+            bg: 'hsl(0, 100%, 97%)',
+            color: 'hsl(0, 84%, 45%)',
+            border: 'hsl(0, 100%, 90%)',
+            label: 'Rejected'
         }
     };
 
-    const s = styles[status?.toLowerCase()] || styles.pending;
+    const s = styles[status?.toLowerCase()] || { bg: '#f1f5f9', color: '#64748b', border: '#e2e8f0', label: status };
 
     return (
         <span style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '0.3rem',
-            padding: '0.25rem 0.7rem',
-            borderRadius: '999px',
-            fontSize: '0.75rem',
+            gap: '0.4rem',
+            padding: '0.35rem 0.85rem',
+            borderRadius: '10px',
+            fontSize: '0.725rem',
             fontWeight: 700,
             textTransform: 'uppercase',
             backgroundColor: s.bg,
             color: s.color,
-            border: `1px solid ${s.border}`
+            border: `1px solid ${s.border}`,
+            letterSpacing: '0.025em'
         }}>
-            {status}
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: s.color }}></div>
+            {s.label}
         </span>
+    );
+};
+
+const RequisitionCard = ({ req, role, user, onEdit, onAction }) => {
+    const isOwner = req.employeeId === user?.uid;
+
+    const getTypeIcon = (type) => {
+        switch (type?.toLowerCase()) {
+            case 'leave request': return <Clock size={16} />;
+            case 'purchase requisition': return <FileText size={16} />;
+            case 'expense claim': return <CheckCircle size={16} />;
+            default: return <FileText size={16} />;
+        }
+    };
+
+    return (
+        <div className="card fade-in" style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.25rem',
+            padding: '1.5rem',
+            background: 'white',
+            position: 'relative',
+            overflow: 'hidden'
+        }}>
+            {/* Header / Type */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    color: 'hsl(var(--primary))',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
+                }}>
+                    <div style={{
+                        width: '32px', height: '32px', borderRadius: '8px',
+                        backgroundColor: 'hsl(var(--primary) / 0.1)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}>
+                        {getTypeIcon(req.type)}
+                    </div>
+                    {req.type}
+                </div>
+                <StatusBadge status={req.status} />
+            </div>
+
+            {/* Content */}
+            <div>
+                <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', fontWeight: 700, color: '#1e293b' }}>
+                    {req.title}
+                </h3>
+                <p style={{
+                    margin: 0, fontSize: '0.9rem', color: '#64748b',
+                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden', lineHeight: '1.5'
+                }}>
+                    {req.description}
+                </p>
+            </div>
+
+            {/* Meta */}
+            <div style={{
+                display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem',
+                padding: '1rem 0', borderTop: '1px solid #f1f5f9', borderBottom: '1px solid #f1f5f9'
+            }}>
+                <div>
+                    <p style={{ margin: '0 0 4px 0', fontSize: '0.7rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase' }}>Amount</p>
+                    <p style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#1e293b' }}>
+                        {req.amount ? `Ksh ${parseInt(req.amount).toLocaleString()}` : '—'}
+                    </p>
+                </div>
+                <div>
+                    <p style={{ margin: '0 0 4px 0', fontSize: '0.7rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase' }}>Submitted</p>
+                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#64748b' }}>
+                        {new Date(req.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
+                </div>
+            </div>
+
+            {/* Footer / Requester & Actions */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{
+                        width: '32px', height: '32px', borderRadius: '50%',
+                        backgroundColor: '#f1f5f9', color: '#64748b',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '0.75rem', fontWeight: 700
+                    }}>
+                        {req.employeeFName?.[0]}{req.employeeLName?.[0]}
+                    </div>
+                    <div style={{ fontSize: '0.85rem' }}>
+                        <div style={{ fontWeight: 600, color: '#1e293b' }}>{req.employeeFName} {req.employeeLName}</div>
+                        <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>{req.department}</div>
+                    </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    {/* Team Leader Actions */}
+                    {role === 'team_leader' && req.status === 'pending_leader' && (
+                        <>
+                            <button
+                                onClick={() => onAction(req, 'approve')}
+                                style={{ padding: '0.5rem', borderRadius: '8px', border: 'none', background: 'hsl(142, 70%, 90%)', color: 'hsl(142, 72%, 29%)', cursor: 'pointer' }}
+                                title="Approve"
+                            >
+                                <Check size={18} />
+                            </button>
+                            <button
+                                onClick={() => onAction(req, 'reject')}
+                                style={{ padding: '0.5rem', borderRadius: '8px', border: 'none', background: 'hsl(0, 100%, 90%)', color: 'hsl(0, 84%, 45%)', cursor: 'pointer' }}
+                                title="Reject"
+                            >
+                                <Ban size={18} />
+                            </button>
+                        </>
+                    )}
+
+                    {/* Manager Actions */}
+                    {role === 'manager' && req.status === 'pending_manager' && (
+                        <>
+                            <button
+                                onClick={() => onAction(req, 'approve')}
+                                style={{ padding: '0.5rem', borderRadius: '8px', border: 'none', background: 'hsl(142, 70%, 90%)', color: 'hsl(142, 72%, 29%)', cursor: 'pointer' }}
+                            >
+                                <Check size={18} />
+                            </button>
+                            <button
+                                onClick={() => onAction(req, 'reject')}
+                                style={{ padding: '0.5rem', borderRadius: '8px', border: 'none', background: 'hsl(0, 100%, 90%)', color: 'hsl(0, 84%, 45%)', cursor: 'pointer' }}
+                            >
+                                <Ban size={18} />
+                            </button>
+                        </>
+                    )}
+
+                    {/* Employee Edit */}
+                    {isOwner && req.status === 'pending_leader' && (
+                        <button
+                            onClick={() => onEdit(req)}
+                            style={{
+                                padding: '0.5rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0',
+                                background: 'white', color: '#1e293b', fontSize: '0.85rem', fontWeight: 600
+                            }}
+                        >
+                            Edit
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
     );
 };
 
 const Requisitions = () => {
     const { requisitions, addRequisition, updateRequisition, userData, user } = useApp();
     const [isFormOpen, setIsFormOpen] = useState(false);
-    const [editingId, setEditingId] = useState(null); // New state for editing
+    const [editingId, setEditingId] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
 
@@ -63,40 +222,16 @@ const Requisitions = () => {
         endDate: '',
     });
 
-    // --- Role Logic ---
     const role = userData?.role?.toLowerCase() || 'employee';
-    const isManager = role === 'manager' || role === 'admin' || role === 'team_leader';
 
-    // --- Filtering ---
     const visibleRequisitions = requisitions.filter(req => {
-        // Scope Filter
         if (role === 'admin') return true;
-
-        // MANAGER: ONLY pending_manager
-        if (role === 'manager')
-            return (
-                req.companyId === userData?.companyId &&
-                req.status === 'pending_manager'
-            );
-
-        // TEAM LEADER: ONLY pending_leader
-        if (role === 'team_leader')
-            return (
-                req.companyId === userData?.companyId &&
-                req.department === userData?.department &&
-                ['pending_leader', 'pending_manager', 'approved', 'rejected'].includes(req.status)
-            );
-
-
-        // EMPLOYEE: sees own requests (all statuses)
-        if (role === 'employee')
-            return req.employeeId === user?.uid;
-
+        if (role === 'manager') return req.companyId === userData?.companyId;
+        if (role === 'team_leader') return req.companyId === userData?.companyId && req.departmentId === userData?.departmentId;
+        if (role === 'employee') return req.employeeId === user?.uid;
         return false;
     }).filter(req => {
-        // Status Filter
         if (filterStatus !== 'all' && req.status !== filterStatus) return false;
-        // Search Filter
         const search = searchTerm.toLowerCase();
         return (
             req.title?.toLowerCase().includes(search) ||
@@ -126,64 +261,39 @@ const Requisitions = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        if (!userData) {
-            alert("User profile not loaded. Please try again.");
-            return;
-        }
+        if (!userData) return;
 
         try {
             if (editingId) {
-                // Update existing requisition
-                await updateRequisition(editingId, {
-                    ...formData
-                });
+                await updateRequisition(editingId, { ...formData });
             } else {
-                // Create new requisition (FIXED)
                 const newReq = {
                     ...formData,
                     status: 'pending_leader',
-
-                    // Identity
                     employeeId: user?.uid,
                     employeeFName: userData.firstName || 'Unknown',
                     employeeLName: userData.lastName || 'User',
-
-                    // DEPARTMENT LINKING
                     departmentId: userData.departmentId || '',
                     department: userData.department || 'Unassigned',
-
-                    // Company
                     companyId: userData.companyId || '',
-
-                    // Metadata
                     createdAt: new Date().toISOString()
                 };
-
                 await addRequisition(newReq);
             }
-
             resetForm();
         } catch (error) {
             console.error("Submission error:", error);
-            alert("Failed to save requisition.");
         }
     };
 
     const handleAction = async (req, action) => {
         if (!confirm(`Are you sure you want to ${action} this request?`)) return;
-
         let nextStatus = req.status;
 
         if (action === 'approve') {
-            if (req.status === 'pending_leader') {
-                nextStatus = 'pending_manager';
-            } else if (req.status === 'pending_manager') {
-                nextStatus = 'approved';
-            }
-        }
-
-        if (action === 'reject') {
+            if (req.status === 'pending_leader') nextStatus = 'pending_manager';
+            else if (req.status === 'pending_manager') nextStatus = 'approved';
+        } else if (action === 'reject') {
             nextStatus = 'rejected';
         }
 
@@ -193,186 +303,160 @@ const Requisitions = () => {
         });
     };
 
-
     return (
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '1rem' }}>
+        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0.5rem 1rem' }}>
             <header style={{
                 display: 'flex',
                 justifyContent: 'space-between',
-                alignItems: 'flex-end',
-                marginBottom: '2rem',
-                paddingBottom: '1.5rem',
-                borderBottom: '1px solid #f1f5f9'
+                alignItems: 'center',
+                marginBottom: '2.5rem',
+                padding: '1.5rem 0',
+                borderBottom: '1px solid rgba(0,0,0,0.05)'
             }}>
                 <div>
-                    <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>Requisitions</h2>
-                    <p style={{ color: '#64748b', marginTop: '0.25rem' }}>Track and manage approvals.</p>
+                    <h2 style={{
+                        fontSize: '2.25rem', fontWeight: 800, color: '#0f172a', margin: 0,
+                        letterSpacing: '-0.025em', background: 'linear-gradient(135deg, #0f172a 0%, #334155 100%)',
+                        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
+                    }}>
+                        Requisitions
+                    </h2>
+                    <p style={{ color: '#64748b', marginTop: '0.4rem', fontSize: '1rem', fontWeight: 500 }}>
+                        Streamlined approval workflows & requests
+                    </p>
                 </div>
                 {role !== 'team_leader' && (
-                    <button className="btn-primary" onClick={() => setIsFormOpen(true)}>
-                        <Plus size={18} style={{ marginRight: '0.5rem' }} /> New Request
+                    <button className="btn-primary" onClick={() => setIsFormOpen(true)} style={{ padding: '0.875rem 1.5rem' }}>
+                        <Plus size={20} style={{ marginRight: '0.6rem' }} /> New Request
                     </button>
                 )}
             </header>
 
             {/* Controls */}
-            <div className="table-card" style={{ marginBottom: '2rem' }}>
-                <div style={{ padding: '1rem', display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                    <div className="search-input-wrapper">
-                        <Search size={18} color="#94a3b8" />
-                        <input
-                            placeholder="Search requests..."
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                            className="search-input"
-                        />
-                    </div>
-                    <select
-                        value={filterStatus}
-                        onChange={e => setFilterStatus(e.target.value)}
-                        style={{ padding: '0.6rem', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none' }}
-                    >
-                        <option value="all">All Status</option>
-                        <option value="pending">Pending</option>
-                        <option value="approved">Approved</option>
-                        <option value="rejected">Rejected</option>
-                    </select>
+            <div style={{
+                display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '2.5rem',
+                padding: '1.25rem', background: 'rgba(255,255,255,0.5)', borderRadius: '20px',
+                border: '1px solid rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)'
+            }}>
+                <div className="search-input-wrapper" style={{ background: 'white', border: '1px solid #e2e8f0', maxWidth: '400px' }}>
+                    <Search size={18} color="#94a3b8" />
+                    <input
+                        placeholder="Search by title, requester or type..."
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="search-input"
+                    />
                 </div>
-
-                <div style={{ overflowX: 'auto' }}>
-                    <table className="data-table">
-                        <thead>
-                            <tr>
-                                <th>Title / Type</th>
-                                <th>Requester</th>
-                                <th>Amount</th>
-                                <th>Schedule</th>
-                                <th>Submitted</th>
-                                <th>Status</th>
-                                <th style={{ textAlign: 'right' }}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {visibleRequisitions.length === 0 ? (
-                                <tr>
-                                    <td colSpan="7" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
-                                        No requisitions found.
-                                    </td>
-                                </tr>
-                            ) : (
-                                visibleRequisitions.map(req => (
-                                    <tr key={req.id} className="row-hover">
-                                        <td>
-                                            <div style={{ fontWeight: 600, color: '#1e293b' }}>{req.title}</div>
-                                            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{req.type}</div>
-                                        </td>
-                                        <td>
-                                            <div style={{ fontWeight: 500 }}>{req.employeeFName} {req.employeeLName}</div>
-                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{req.department}</div>
-                                        </td>
-                                        <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>
-                                            {req.amount ? parseInt(req.amount).toLocaleString() : '-'}
-                                        </td>
-                                        <td>
-                                            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                                                {req.startDate ? `${req.startDate} to ${req.endDate}` : 'N/A'}
-                                            </div>
-                                        </td>
-                                        <td style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                                            {new Date(req.createdAt).toLocaleDateString()}
-                                        </td>
-                                        <td><StatusBadge status={req.status} /></td>
-                                        <td style={{ textAlign: 'right' }}>
-                                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                                {/* TEAM LEADER ACTION (ONLY when pending_leader) */}
-                                                {role === 'team_leader' && req.status === 'pending_leader' && (
-                                                    <>
-                                                        <button
-                                                            onClick={() => handleAction(req, 'approve')}
-                                                            style={{
-                                                                padding: '0.4rem',
-                                                                borderRadius: '6px',
-                                                                border: 'none',
-                                                                background: '#dcfce7',
-                                                                color: '#166534',
-                                                                cursor: 'pointer'
-                                                            }}
-                                                        >
-                                                            <Check size={16} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleAction(req, 'reject')}
-                                                            style={{
-                                                                padding: '0.4rem',
-                                                                borderRadius: '6px',
-                                                                border: 'none',
-                                                                background: '#fee2e2',
-                                                                color: '#991b1b',
-                                                                cursor: 'pointer'
-                                                            }}
-                                                        >
-                                                            <Ban size={16} />
-                                                        </button>
-                                                    </>
-                                                )}
-
-                                                {/* MANAGER ACTION */}
-                                                {role === 'manager' && req.status === 'pending_manager' && (
-                                                    <>
-                                                        <button onClick={() => handleAction(req, 'approve')}>
-                                                            <Check size={16} />
-                                                        </button>
-                                                        <button onClick={() => handleAction(req, 'reject')}>
-                                                            <Ban size={16} />
-                                                        </button>
-                                                    </>
-                                                )}
-
-
-                                                {role === 'employee' &&
-                                                    req.status === 'pending_leader' &&
-                                                    req.employeeId === user?.uid && (
-                                                        <button>Edit</button>
-                                                    )
-                                                }
-
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+                    {['all', 'pending_leader', 'pending_manager', 'approved', 'rejected'].map(status => (
+                        <button
+                            key={status}
+                            onClick={() => setFilterStatus(status)}
+                            style={{
+                                padding: '0.6rem 1.25rem',
+                                borderRadius: '12px',
+                                fontSize: '0.85rem',
+                                fontWeight: 600,
+                                border: '1px solid',
+                                borderColor: filterStatus === status ? 'hsl(var(--primary))' : '#e2e8f0',
+                                backgroundColor: filterStatus === status ? 'hsl(var(--primary))' : 'white',
+                                color: filterStatus === status ? 'white' : '#64748b',
+                                transition: 'all 0.2s',
+                                whiteSpace: 'nowrap'
+                            }}
+                        >
+                            {status === 'all' ? 'All' : status.replace('_', ' ').replace('pending ', '')}
+                        </button>
+                    ))}
                 </div>
             </div>
+
+            {/* Content Grid */}
+            {visibleRequisitions.length === 0 ? (
+                <div style={{
+                    padding: '6rem 2rem', textAlign: 'center', background: 'white', borderRadius: '24px',
+                    border: '1px solid #f1f5f9', boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
+                }}>
+                    <div style={{
+                        width: '64px', height: '64px', borderRadius: '20px', backgroundColor: '#f8fafc',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem',
+                        color: '#94a3b8'
+                    }}>
+                        <FileText size={32} />
+                    </div>
+                    <h3 style={{ margin: '0 0 0.5rem 0', color: '#1e293b' }}>No requisitions found</h3>
+                    <p style={{ margin: 0, color: '#64748b' }}>Try adjusting your search or filters.</p>
+                </div>
+            ) : (
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+                    gap: '1.5rem'
+                }}>
+                    {visibleRequisitions.map((req, idx) => (
+                        <div key={req.id} style={{ animationDelay: `${idx * 0.05}s` }} className="fade-in">
+                            <RequisitionCard
+                                req={req}
+                                role={role}
+                                user={user}
+                                onEdit={handleEdit}
+                                onAction={handleAction}
+                            />
+                        </div>
+                    ))}
+                </div>
+            )}
 
             {/* Create Modal */}
             {isFormOpen && (
                 <div className="modal-overlay">
-                    <div style={{ backgroundColor: 'white', borderRadius: '16px', maxWidth: '500px', width: '100%', padding: '0', overflow: 'hidden' }}>
-                        <div style={{ padding: '1.25rem', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3 style={{ margin: 0 }}>{editingId ? 'Edit Requisition' : 'New Requisition'}</h3>
-                            <button onClick={resetForm} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><X size={20} /></button>
+                    <div className="fade-in" style={{
+                        backgroundColor: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(16px)',
+                        borderRadius: '24px', maxWidth: '550px', width: '100%', padding: '0',
+                        overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                        border: '1px solid rgba(255,255,255,0.5)'
+                    }}>
+                        <div style={{
+                            padding: '1.5rem 2rem', borderBottom: '1px solid #f1f5f9',
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            background: 'rgba(255,255,255,0.5)'
+                        }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#1e293b' }}>
+                                    {editingId ? 'Edit Requisition' : 'New Requisition'}
+                                </h3>
+                                <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                                    Fill in the details below
+                                </p>
+                            </div>
+                            <button onClick={resetForm} style={{
+                                width: '36px', height: '36px', borderRadius: '10px',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b'
+                            }}>
+                                <X size={20} />
+                            </button>
                         </div>
-                        <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.4rem' }}>Title</label>
+                        <form onSubmit={handleSubmit} style={{ padding: '2rem' }}>
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>Request Title</label>
                                 <input
                                     required
                                     className="styled-input"
                                     value={formData.title}
                                     onChange={e => setFormData({ ...formData, title: e.target.value })}
-                                    placeholder="e.g. New Laptop"
-                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}
+                                    placeholder="e.g. MacBook Pro M3 Upgrade"
+                                    style={{ width: '100%', padding: '0.875rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem' }}
                                 />
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.4rem' }}>Type</label>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>Request Type</label>
                                     <select
                                         value={formData.type}
                                         onChange={e => setFormData({ ...formData, type: e.target.value })}
-                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}
+                                        style={{ width: '100%', padding: '0.875rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem', appearance: 'none', background: 'white' }}
                                     >
                                         <option>Purchase Requisition</option>
                                         <option>Leave Request</option>
@@ -381,52 +465,63 @@ const Requisitions = () => {
                                     </select>
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.4rem' }}>Amount (Est.)</label>
-                                    <input
-                                        type="number"
-                                        value={formData.amount}
-                                        onChange={e => setFormData({ ...formData, amount: e.target.value })}
-                                        placeholder="0.00"
-                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}
-                                    />
+                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>Estimated Amount</label>
+                                    <div style={{ position: 'relative' }}>
+                                        <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: '#94a3b8' }}>Ksh</div>
+                                        <input
+                                            type="number"
+                                            value={formData.amount}
+                                            onChange={e => setFormData({ ...formData, amount: e.target.value })}
+                                            placeholder="0.00"
+                                            style={{ width: '100%', padding: '0.875rem 0.875rem 0.875rem 3rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem' }}
+                                        />
+                                    </div>
                                 </div>
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.4rem' }}>Start Date</label>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>Start Date</label>
                                     <input
                                         type="date"
                                         value={formData.startDate}
                                         onChange={e => setFormData({ ...formData, startDate: e.target.value })}
-                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}
+                                        style={{ width: '100%', padding: '0.875rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem' }}
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.4rem' }}>End Date</label>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>End Date</label>
                                     <input
                                         type="date"
                                         value={formData.endDate}
                                         onChange={e => setFormData({ ...formData, endDate: e.target.value })}
-                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}
+                                        style={{ width: '100%', padding: '0.875rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem' }}
                                     />
                                 </div>
                             </div>
-                            <div style={{ marginBottom: '1.5rem' }}>
-                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.4rem' }}>Description</label>
+
+                            <div style={{ marginBottom: '2rem' }}>
+                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>Justification / Details</label>
                                 <textarea
                                     required
                                     className="styled-input"
                                     value={formData.description}
                                     onChange={e => setFormData({ ...formData, description: e.target.value })}
-                                    placeholder="Details..."
-                                    rows={3}
-                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}
+                                    placeholder="Provide a detailed explanation for this request..."
+                                    rows={4}
+                                    style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem', resize: 'none', lineHeight: '1.6' }}
                                 />
                             </div>
+
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                                <button type="button" onClick={resetForm} style={{ padding: '0.7rem 1.2rem', borderRadius: '10px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer' }}>Cancel</button>
-                                <button type="submit" className="btn-primary" style={{ padding: '0.7rem 1.2rem', borderRadius: '10px', border: 'none', color: 'white', fontWeight: 600, cursor: 'pointer', background: '#2563eb' }}>
-                                    {editingId ? 'Save Changes' : 'Submit Request'}
+                                <button type="button" onClick={resetForm} style={{
+                                    padding: '0.875rem 1.75rem', borderRadius: '14px', border: '1px solid #e2e8f0',
+                                    background: 'white', color: '#475569', fontWeight: 600, cursor: 'pointer'
+                                }}>
+                                    Cancel
+                                </button>
+                                <button type="submit" className="btn-primary" style={{ padding: '0.875rem 2rem', borderRadius: '14px' }}>
+                                    {editingId ? 'Update Request' : 'Submit Requisition'}
                                 </button>
                             </div>
                         </form>
@@ -438,3 +533,4 @@ const Requisitions = () => {
 };
 
 export default Requisitions;
+

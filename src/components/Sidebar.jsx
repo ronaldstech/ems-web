@@ -6,13 +6,37 @@ import clsx from 'clsx';
 import { useApp } from '../context/AppContext';
 
 const Sidebar = ({ className, onClose }) => {
-  const { logout, user, userData } = useApp();
+  const { logout, user, userData, requisitions } = useApp();
   const navigate = useNavigate();
   const role = userData?.role?.toLowerCase() || 'employee';
 
+  // Calculate pending requisitions badge count
+  const getPendingRequisitionsCount = () => {
+    if (!requisitions || !userData) return 0;
+
+    if (role === 'manager') {
+      return requisitions.filter(req =>
+        req.companyId === userData.companyId &&
+        req.status === 'pending_manager'
+      ).length;
+    }
+
+    if (role === 'team_leader') {
+      return requisitions.filter(req =>
+        req.companyId === userData.companyId &&
+        req.departmentId === userData.departmentId &&
+        req.status === 'pending_leader'
+      ).length;
+    }
+
+    return 0;
+  };
+
+  const pendingCount = getPendingRequisitionsCount();
+
   const allNavItems = [
     { to: '/', icon: Home, label: 'Dashboard', roles: ['admin', 'manager', 'team_leader', 'employee', 'contractor'] },
-    { to: '/requisitions', icon: ClipboardList, label: 'Requisitions', roles: ['admin', 'manager', 'team_leader', 'employee'] },
+    { to: '/requisitions', icon: ClipboardList, label: 'Requisitions', roles: ['admin', 'manager', 'team_leader', 'employee'], badge: pendingCount },
     { to: '/attendance', icon: Clock, label: 'Check In/Out', roles: ['employee'] }, // New
     { to: '/my-team', icon: UserCheck, label: 'Team', roles: ['employee'] }, // New
     { to: '/invoices', icon: FileText, label: 'Invoices', roles: ['admin', 'manager', 'employee'] }, // Added employee
@@ -76,10 +100,26 @@ const Sidebar = ({ className, onClose }) => {
                 transition: 'all 0.2s ease',
                 background: isActive ? 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))' : 'transparent',
                 boxShadow: isActive ? '0 4px 12px rgba(99, 102, 241, 0.3)' : 'none',
+                position: 'relative'
               })}
             >
               <item.icon size={20} style={{ opacity: 0.9 }} />
-              <span>{item.label}</span>
+              <span style={{ flex: 1 }}>{item.label}</span>
+              {item.badge > 0 && (
+                <span style={{
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  padding: '2px 6px',
+                  borderRadius: '999px',
+                  minWidth: '18px',
+                  textAlign: 'center',
+                  boxShadow: '0 2px 4px rgba(239, 68, 68, 0.3)'
+                }}>
+                  {item.badge}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>
