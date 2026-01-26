@@ -304,68 +304,133 @@ const Requisitions = () => {
     };
 
     return (
-        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0.5rem 1rem' }}>
+        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0.5rem 1.25rem' }}>
+            {/* Optimized Header Section */}
             <header style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '1.5rem',
                 marginBottom: '2.5rem',
                 padding: '1.5rem 0',
                 borderBottom: '1px solid rgba(0,0,0,0.05)'
             }}>
-                <div>
+                <div style={{ flex: '1 1 300px' }}>
                     <h2 style={{
-                        fontSize: '2.25rem', fontWeight: 800, color: '#0f172a', margin: 0,
-                        letterSpacing: '-0.025em', background: 'linear-gradient(135deg, #0f172a 0%, #334155 100%)',
-                        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
+                        fontSize: 'clamp(1.75rem, 5vw, 2.5rem)',
+                        fontWeight: 900,
+                        color: '#0f172a',
+                        margin: 0,
+                        letterSpacing: '-0.03em',
+                        lineHeight: 1.1,
+                        background: 'linear-gradient(135deg, #0f172a 0%, #475569 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent'
                     }}>
                         Requisitions
                     </h2>
-                    <p style={{ color: '#64748b', marginTop: '0.4rem', fontSize: '1rem', fontWeight: 500 }}>
-                        Streamlined approval workflows & requests
+                    <p style={{ color: '#64748b', marginTop: '0.5rem', fontSize: '1.05rem', fontWeight: 500 }}>
+                        Streamline your workflow & requests
                     </p>
                 </div>
+
                 {role !== 'team_leader' && (
-                    <button className="btn-primary" onClick={() => setIsFormOpen(true)} style={{ padding: '0.875rem 1.5rem' }}>
-                        <Plus size={20} style={{ marginRight: '0.6rem' }} /> New Request
+                    <button
+                        className="btn-primary"
+                        onClick={() => setIsFormOpen(true)}
+                        style={{
+                            padding: '0.875rem 2rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            fontWeight: 700,
+                            letterSpacing: '0.01em',
+                            fontSize: '0.95rem',
+                            borderRadius: '16px',
+                            background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
+                            boxShadow: '0 10px 25px -5px rgba(37, 99, 235, 0.4)',
+                            border: 'none',
+                            color: 'white',
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                            flexShrink: 0
+                        }}
+                    >
+                        <div style={{
+                            width: '24px', height: '24px', borderRadius: '8px',
+                            backgroundColor: 'rgba(255,255,255,0.2)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                            <Plus size={16} strokeWidth={3} />
+                        </div>
+                        New Request
                     </button>
                 )}
             </header>
 
-            {/* Controls */}
+            {/* Responsive Controls */}
             <div style={{
-                display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '2.5rem',
-                padding: '1.25rem', background: 'rgba(255,255,255,0.5)', borderRadius: '20px',
-                border: '1px solid rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)'
+                display: 'flex',
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                gap: '1.25rem',
+                alignItems: 'center',
+                marginBottom: '2.5rem',
+                padding: '1.5rem',
+                background: 'rgba(255,255,255,0.6)',
+                borderRadius: '24px',
+                border: '1px solid rgba(255,255,255,0.8)',
+                backdropFilter: 'blur(12px)',
+                boxShadow: '0 4px 20px -5px rgba(0,0,0,0.03)'
             }}>
-                <div className="search-input-wrapper" style={{ background: 'white', border: '1px solid #e2e8f0', maxWidth: '400px' }}>
-                    <Search size={18} color="#94a3b8" />
+                <div className="search-input-wrapper" style={{
+                    background: 'white',
+                    border: '1px solid #e2e8f0',
+                    flex: '1 1 400px',
+                    minWidth: '280px',
+                    padding: '0.75rem 1.25rem',
+                    borderRadius: '16px',
+                    display: 'flex',
+                    alignItems: 'center'
+                }}>
+                    <Search size={20} color="#94a3b8" />
                     <input
-                        placeholder="Search by title, requester or type..."
+                        placeholder="Search title, requester or type..."
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                         className="search-input"
+                        style={{ fontSize: '1rem', marginLeft: '12px' }}
                     />
                 </div>
-                <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+
+                <div style={{
+                    display: 'flex',
+                    gap: '10px',
+                    overflowX: 'auto',
+                    padding: '4px',
+                    msOverflowStyle: 'none',
+                    scrollbarWidth: 'none',
+                    flex: '0 1 auto'
+                }}>
                     {['all', 'pending_leader', 'pending_manager', 'approved', 'rejected'].map(status => (
                         <button
                             key={status}
                             onClick={() => setFilterStatus(status)}
                             style={{
-                                padding: '0.6rem 1.25rem',
-                                borderRadius: '12px',
-                                fontSize: '0.85rem',
-                                fontWeight: 600,
+                                padding: '0.65rem 1.25rem',
+                                borderRadius: '14px',
+                                fontSize: '0.875rem',
+                                fontWeight: 700,
                                 border: '1px solid',
-                                borderColor: filterStatus === status ? 'hsl(var(--primary))' : '#e2e8f0',
-                                backgroundColor: filterStatus === status ? 'hsl(var(--primary))' : 'white',
+                                borderColor: filterStatus === status ? 'hsl(var(--primary))' : 'transparent',
+                                backgroundColor: filterStatus === status ? 'hsl(var(--primary))' : '#f1f5f9',
                                 color: filterStatus === status ? 'white' : '#64748b',
-                                transition: 'all 0.2s',
-                                whiteSpace: 'nowrap'
+                                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                                whiteSpace: 'nowrap',
+                                boxShadow: filterStatus === status ? '0 8px 15px -3px rgba(99, 102, 241, 0.3)' : 'none'
                             }}
                         >
-                            {status === 'all' ? 'All' : status.replace('_', ' ').replace('pending ', '')}
+                            {status === 'all' ? 'All Requests' : status.replace('_', ' ').replace('pending ', '')}
                         </button>
                     ))}
                 </div>
