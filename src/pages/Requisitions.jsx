@@ -120,6 +120,24 @@ const RequisitionCard = ({ req, role, user, onEdit, onAction }) => {
                 </p>
             </div>
 
+            {/* Rejection Reason Display */}
+            {req.status === 'rejected' && req.rejectionReason && (
+                <div style={{
+                    padding: '0.75rem',
+                    borderRadius: '10px',
+                    backgroundColor: 'hsl(0, 100%, 98%)',
+                    border: '1px dashed hsl(0, 100%, 90%)',
+                    fontSize: '0.85rem'
+                }}>
+                    <div style={{ fontWeight: 700, color: 'hsl(0, 84%, 45%)', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <XCircle size={12} /> Rejection Reason
+                    </div>
+                    <p style={{ margin: 0, color: 'hsl(0, 50%, 40%)', fontStyle: 'italic' }}>
+                        "{req.rejectionReason}"
+                    </p>
+                </div>
+            )}
+
             {/* Meta */}
             <div style={{
                 display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem',
@@ -128,7 +146,7 @@ const RequisitionCard = ({ req, role, user, onEdit, onAction }) => {
                 <div>
                     <p style={{ margin: '0 0 4px 0', fontSize: '0.7rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase' }}>Amount</p>
                     <p style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#1e293b' }}>
-                        {req.amount ? `MWK ${parseInt(req.amount).toLocaleString()}` : '—'}
+                        {req.amount ? `MK ${parseInt(req.amount).toLocaleString()}` : '—'}
                     </p>
                 </div>
                 <div>
@@ -150,8 +168,8 @@ const RequisitionCard = ({ req, role, user, onEdit, onAction }) => {
                     }}>
                         {req.employeeFName?.[0]}{req.employeeLName?.[0]}
                     </div>
-                    <div style={{ fontSize: '0.85rem' }}>
-                        <div style={{ fontWeight: 600, color: '#1e293b' }}>{req.employeeFName} {req.employeeLName}</div>
+                    <div style={{ fontSize: '0.85rem', overflow: 'hidden' }}>
+                        <div style={{ fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{req.employeeFName} {req.employeeLName}</div>
                         <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>{req.department}</div>
                     </div>
                 </div>
@@ -216,6 +234,9 @@ const RequisitionCard = ({ req, role, user, onEdit, onAction }) => {
 const Requisitions = () => {
     const { requisitions, addRequisition, updateRequisition, userData, user } = useApp();
     const [isFormOpen, setIsFormOpen] = useState(false);
+    const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+    const [rejectReq, setRejectReq] = useState(null);
+    const [rejectionReason, setRejectionReason] = useState('');
     const [editingId, setEditingId] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
@@ -294,20 +315,44 @@ const Requisitions = () => {
     };
 
     const handleAction = async (req, action) => {
-        if (!confirm(`Are you sure you want to ${action} this request?`)) return;
+        if (action === 'reject') {
+            setRejectReq(req);
+            setIsRejectModalOpen(true);
+            return;
+        }
+
+        if (!confirm(`Are you sure you want to approve this request?`)) return;
         let nextStatus = req.status;
 
         if (action === 'approve') {
             if (req.status === 'pending_leader') nextStatus = 'pending_manager';
             else if (req.status === 'pending_manager') nextStatus = 'approved';
-        } else if (action === 'reject') {
-            nextStatus = 'rejected';
         }
 
         await updateRequisition(req.id, {
             status: nextStatus,
             updatedAt: new Date().toISOString()
         });
+    };
+
+    const handleConfirmRejection = async () => {
+        if (!rejectionReason.trim()) {
+            alert("Please provide a reason for rejection.");
+            return;
+        }
+
+        try {
+            await updateRequisition(rejectReq.id, {
+                status: 'rejected',
+                rejectionReason: rejectionReason.trim(),
+                updatedAt: new Date().toISOString()
+            });
+            setIsRejectModalOpen(false);
+            setRejectReq(null);
+            setRejectionReason('');
+        } catch (error) {
+            console.error("Rejection error:", error);
+        }
     };
 
     return (
@@ -607,9 +652,83 @@ const Requisitions = () => {
                     </div>
                 </div>
             )}
+
+            {/* Rejection Modal */}
+            {isRejectModalOpen && (
+                <div className="modal-overlay">
+                    <div className="fade-in" style={{
+                        backgroundColor: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(16px)',
+                        borderRadius: '24px', maxWidth: '500px', width: '100%', padding: '0',
+                        overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                        border: '1px solid rgba(255,255,255,0.5)'
+                    }}>
+                        <div style={{
+                            padding: '1.5rem 2rem', borderBottom: '1px solid #f1f5f9',
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            background: 'rgba(255,255,255,0.5)'
+                        }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#b91c1c' }}>
+                                    Reject Requisition
+                                </h3>
+                                <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                                    Please provide a reason for declining this request
+                                </p>
+                            </div>
+                            <button onClick={() => { setIsRejectModalOpen(false); setRejectReq(null); setRejectionReason(''); }} style={{
+                                width: '36px', height: '36px', borderRadius: '10px',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b'
+                            }}>
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div style={{ padding: '2rem' }}>
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <div style={{
+                                    padding: '1rem', borderRadius: '12px', backgroundColor: '#f8fafc',
+                                    border: '1px solid #f1f5f9', marginBottom: '1.5rem'
+                                }}>
+                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', marginBottom: '4px' }}>Request</div>
+                                    <div style={{ fontWeight: 700, color: '#1e293b' }}>{rejectReq?.title}</div>
+                                </div>
+                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>Rejection Reason</label>
+                                <textarea
+                                    required
+                                    value={rejectionReason}
+                                    onChange={e => setRejectionReason(e.target.value)}
+                                    placeholder="e.g. Budget constraints, insufficient details..."
+                                    rows={4}
+                                    style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem', resize: 'none', lineHeight: '1.6' }}
+                                />
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                                <button type="button" onClick={() => { setIsRejectModalOpen(false); setRejectReq(null); setRejectionReason(''); }} style={{
+                                    padding: '0.875rem 1.75rem', borderRadius: '14px', border: '1px solid #e2e8f0',
+                                    background: 'white', color: '#475569', fontWeight: 600, cursor: 'pointer'
+                                }}>
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleConfirmRejection}
+                                    style={{
+                                        padding: '0.875rem 2rem', borderRadius: '14px', border: 'none',
+                                        background: '#dc2626', color: 'white', fontWeight: 700,
+                                        cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(220, 38, 38, 0.2)'
+                                    }}
+                                >
+                                    Confirm Rejection
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
 
 export default Requisitions;
+
 
