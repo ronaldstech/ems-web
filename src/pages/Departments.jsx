@@ -65,16 +65,32 @@ const Departments = () => {
                 toast.success('New department created');
             }
 
-            // Sync Team Leader Data
-            if (data.teamLeaderId) {
-                const leader = companyEmployees.find(e => e.id === data.teamLeaderId);
-                if (leader) {
-                    await updateEmployee(leader.id, {
-                        role: 'team_leader',
-                        department: data.name
+            // Sync Team Leader Data (CORRECT)
+            // === TEAM LEADER ENFORCEMENT ===
+            if (data.teamLeaderId && deptId) {
+
+                // 1. Remove this leader from any previous department
+                const previousDept = companyDepartments.find(
+                    d => d.teamLeaderId === data.teamLeaderId && d.id !== deptId
+                );
+
+                if (previousDept) {
+                    await updateDepartment(previousDept.id, {
+                        teamLeaderId: ''
                     });
-                    toast.success(`${leader.firstName} is now the Team Leader`);
                 }
+
+                // 2. Update department with new leader
+                await updateDepartment(deptId, {
+                    teamLeaderId: data.teamLeaderId
+                });
+
+                // 3. Update leader document
+                await updateEmployee(data.teamLeaderId, {
+                    role: 'team_leader',
+                    departmentId: deptId,
+                    department: data.name
+                });
             }
 
             resetForm();
@@ -105,12 +121,27 @@ const Departments = () => {
         setIsMembersOpen(true);
     };
 
-    const toggleMember = async (employee, deptName) => {
+    const toggleMember = async (employee, dept) => {
+        if (employee.departmentId && employee.departmentId !== dept.id) {
+            toast.error(
+                `${employee.firstName} already belongs to ${employee.department}`
+            );
+            return;
+        }
+
         try {
-            // Toggle department assignment
-            const newDept = employee.department === deptName ? '' : deptName;
-            await updateEmployee(employee.id, { department: newDept });
-            toast.success(newDept ? `Added ${employee.firstName} to ${deptName}` : `Removed ${employee.firstName}`);
+            const isSameDept = employee.departmentId === dept.id;
+
+            await updateEmployee(employee.id, {
+                departmentId: isSameDept ? '' : dept.id,
+                department: isSameDept ? '' : dept.name
+            });
+
+            toast.success(
+                isSameDept
+                    ? `Removed ${employee.firstName}`
+                    : `Added ${employee.firstName} to ${dept.name}`
+            );
         } catch (error) {
             toast.error("Error updating member");
         }
@@ -123,8 +154,8 @@ const Departments = () => {
     };
 
     // Helper to count members
-    const getMemberCount = (deptName) => {
-        return companyEmployees.filter(e => e.department === deptName).length;
+    const getMemberCount = (deptId) => {
+        return companyEmployees.filter(e => e.departmentId === deptId).length;
     };
 
     return (
@@ -212,7 +243,7 @@ const Departments = () => {
                             display: 'flex', justifyContent: 'space-between', alignItems: 'center'
                         }}>
                             <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500 }}>
-                                {getMemberCount(dept.name)} Members
+                                {getMemberCount(dept.id)} Members
                             </div>
                             <button
                                 onClick={() => handleManageMembers(dept)}
@@ -273,15 +304,35 @@ const Departments = () => {
                                 <select
                                     value={formData.teamLeaderId}
                                     onChange={(e) => setFormData({ ...formData, teamLeaderId: e.target.value })}
-                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}
+                                    style={{
+                                        width: '100%',
+                                        padding: '0.75rem',
+                                        borderRadius: '10px',
+                                        border: '1px solid #e2e8f0'
+                                    }}
                                 >
                                     <option value="">Select an employee...</option>
+
                                     {companyEmployees
                                         .filter(emp => emp.role?.toLowerCase() !== 'manager')
-                                        .map(emp => (
-                                            <option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName} ({emp.role})</option>
-                                        ))}
+                                        .map(emp => {
+                                            const assignedElsewhere =
+                                                emp.departmentId &&
+                                                emp.departmentId !== editingId;
+
+                                            return (
+                                                <option
+                                                    key={emp.id}
+                                                    value={emp.id}
+                                                    disabled={assignedElsewhere}
+                                                >
+                                                    {emp.firstName} {emp.lastName}
+                                                    {assignedElsewhere ? ` — ${emp.department}` : ''}
+                                                </option>
+                                            );
+                                        })}
                                 </select>
+
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
                                 <button type="button" onClick={resetForm} style={{ padding: '0.7rem 1.2rem', borderRadius: '10px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer' }}>Cancel</button>
@@ -312,19 +363,41 @@ const Departments = () => {
                             {companyEmployees
                                 .filter(emp => emp.role?.toLowerCase() !== 'manager' && emp.id !== viewingDept.teamLeaderId)
                                 .map(emp => {
-                                    const isMember = emp.department === viewingDept.name;
+                                    const isMember = emp.departmentId === viewingDept.id;
+                                    const assignedElsewhere = emp.departmentId && !isMember;
+
                                     // If TL, only show members. If Manager, show all candidates.
                                     if (isTL && !isMember) return null;
 
                                     return (
-                                        <div key={emp.id}
-                                            onClick={() => isManager && toggleMember(emp, viewingDept.name)}
+                                        <div
+                                            key={emp.id}
+                                            onClick={() => {
+                                                if (!isManager || assignedElsewhere) return;
+                                                toggleMember(emp, viewingDept);
+                                            }}
                                             style={{
-                                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                                padding: '0.75rem 1rem', marginBottom: '0.5rem', borderRadius: '10px',
-                                                border: isMember ? '1px solid #2563eb' : '1px solid #e2e8f0',
-                                                backgroundColor: isMember ? '#eff6ff' : 'white',
-                                                cursor: isManager ? 'pointer' : 'default', transition: 'all 0.2s'
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                padding: '0.75rem 1rem',
+                                                marginBottom: '0.5rem',
+                                                borderRadius: '10px',
+                                                border: isMember
+                                                    ? '1px solid #2563eb'
+                                                    : '1px solid #e2e8f0',
+                                                backgroundColor: assignedElsewhere
+                                                    ? '#f8fafc'
+                                                    : isMember
+                                                        ? '#eff6ff'
+                                                        : 'white',
+                                                opacity: assignedElsewhere ? 0.6 : 1,
+                                                cursor: assignedElsewhere
+                                                    ? 'not-allowed'
+                                                    : isManager
+                                                        ? 'pointer'
+                                                        : 'default',
+                                                transition: 'all 0.2s'
                                             }}
                                         >
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

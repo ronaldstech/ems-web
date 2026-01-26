@@ -4,10 +4,28 @@ import { Plus, X, Search, CheckCircle, XCircle, Clock, FileText, Ban, Check } fr
 
 const StatusBadge = ({ status }) => {
     const styles = {
-        pending: { bg: 'rgba(245, 158, 11, 0.1)', color: '#d97706', border: 'rgba(245, 158, 11, 0.2)' },
-        approved: { bg: 'rgba(34, 197, 94, 0.1)', color: '#15803d', border: 'rgba(34, 197, 94, 0.2)' },
-        rejected: { bg: 'rgba(239, 68, 68, 0.1)', color: '#b91c1c', border: 'rgba(239, 68, 68, 0.2)' }
+        pending_leader: {
+            bg: 'rgba(59,130,246,0.1)',
+            color: '#1d4ed8',
+            border: 'rgba(59,130,246,0.2)'
+        },
+        pending_manager: {
+            bg: 'rgba(245,158,11,0.1)',
+            color: '#b45309',
+            border: 'rgba(245,158,11,0.2)'
+        },
+        approved: {
+            bg: 'rgba(34,197,94,0.1)',
+            color: '#15803d',
+            border: 'rgba(34,197,94,0.2)'
+        },
+        rejected: {
+            bg: 'rgba(239,68,68,0.1)',
+            color: '#b91c1c',
+            border: 'rgba(239,68,68,0.2)'
+        }
     };
+
     const s = styles[status?.toLowerCase()] || styles.pending;
 
     return (
@@ -53,9 +71,27 @@ const Requisitions = () => {
     const visibleRequisitions = requisitions.filter(req => {
         // Scope Filter
         if (role === 'admin') return true;
-        if (role === 'manager') return req.companyId === userData?.companyId; // See all in company
-        if (role === 'team_leader') return req.companyId === userData?.companyId && req.department === userData?.department; // See only team
-        if (role === 'employee') return req.employeeId === user?.uid; // Match Auth UID
+
+        // MANAGER: ONLY pending_manager
+        if (role === 'manager')
+            return (
+                req.companyId === userData?.companyId &&
+                req.status === 'pending_manager'
+            );
+
+        // TEAM LEADER: ONLY pending_leader
+        if (role === 'team_leader')
+            return (
+                req.companyId === userData?.companyId &&
+                req.department === userData?.department &&
+                ['pending_leader', 'pending_manager', 'approved', 'rejected'].includes(req.status)
+            );
+
+
+        // EMPLOYEE: sees own requests (all statuses)
+        if (role === 'employee')
+            return req.employeeId === user?.uid;
+
         return false;
     }).filter(req => {
         // Status Filter
@@ -98,38 +134,65 @@ const Requisitions = () => {
 
         try {
             if (editingId) {
-                // Update existing
+                // Update existing requisition
                 await updateRequisition(editingId, {
-                    ...formData,
-                    // Don't overwrite immutable fields like createdAt
+                    ...formData
                 });
             } else {
-                // Create new
+                // Create new requisition (FIXED)
                 const newReq = {
                     ...formData,
-                    status: 'pending',
+                    status: 'pending_leader',
+
+                    // Identity
                     employeeId: user?.uid,
                     employeeFName: userData.firstName || 'Unknown',
                     employeeLName: userData.lastName || 'User',
-                    departmentId: userData.department || 'Unassigned',
+
+                    // DEPARTMENT LINKING
+                    departmentId: userData.departmentId || '',
                     department: userData.department || 'Unassigned',
+
+                    // Company
                     companyId: userData.companyId || '',
+
+                    // Metadata
+                    createdAt: new Date().toISOString()
                 };
+
                 await addRequisition(newReq);
             }
+
             resetForm();
         } catch (error) {
             console.error("Submission error:", error);
-            alert("Failed to save requisition. Please check console.");
+            alert("Failed to save requisition.");
         }
     };
 
-    const handleAction = async (id, action) => {
+    const handleAction = async (req, action) => {
         if (!confirm(`Are you sure you want to ${action} this request?`)) return;
 
-        const status = action === 'approve' ? 'approved' : 'rejected';
-        await updateRequisition(id, { status });
+        let nextStatus = req.status;
+
+        if (action === 'approve') {
+            if (req.status === 'pending_leader') {
+                nextStatus = 'pending_manager';
+            } else if (req.status === 'pending_manager') {
+                nextStatus = 'approved';
+            }
+        }
+
+        if (action === 'reject') {
+            nextStatus = 'rejected';
+        }
+
+        await updateRequisition(req.id, {
+            status: nextStatus,
+            updatedAt: new Date().toISOString()
+        });
     };
+
 
     return (
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '1rem' }}>
@@ -221,35 +284,58 @@ const Requisitions = () => {
                                         <td><StatusBadge status={req.status} /></td>
                                         <td style={{ textAlign: 'right' }}>
                                             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                                {/* Manager Actions */}
-                                                {isManager && req.status === 'pending' && (
+                                                {/* TEAM LEADER ACTION (ONLY when pending_leader) */}
+                                                {role === 'team_leader' && req.status === 'pending_leader' && (
                                                     <>
                                                         <button
-                                                            onClick={() => handleAction(req.id, 'approve')}
-                                                            style={{ padding: '0.4rem', borderRadius: '6px', border: 'none', background: '#dcfce7', color: '#166534', cursor: 'pointer' }}
-                                                            title="Approve"
+                                                            onClick={() => handleAction(req, 'approve')}
+                                                            style={{
+                                                                padding: '0.4rem',
+                                                                borderRadius: '6px',
+                                                                border: 'none',
+                                                                background: '#dcfce7',
+                                                                color: '#166534',
+                                                                cursor: 'pointer'
+                                                            }}
                                                         >
                                                             <Check size={16} />
                                                         </button>
                                                         <button
-                                                            onClick={() => handleAction(req.id, 'reject')}
-                                                            style={{ padding: '0.4rem', borderRadius: '6px', border: 'none', background: '#fee2e2', color: '#991b1b', cursor: 'pointer' }}
-                                                            title="Reject"
+                                                            onClick={() => handleAction(req, 'reject')}
+                                                            style={{
+                                                                padding: '0.4rem',
+                                                                borderRadius: '6px',
+                                                                border: 'none',
+                                                                background: '#fee2e2',
+                                                                color: '#991b1b',
+                                                                cursor: 'pointer'
+                                                            }}
                                                         >
                                                             <Ban size={16} />
                                                         </button>
                                                     </>
                                                 )}
 
-                                                {/* Employee Actions - Edit */}
-                                                {!isManager && req.status === 'pending' && req.employeeId === user?.uid && (
-                                                    <button
-                                                        onClick={() => handleEdit(req)}
-                                                        style={{ padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}
-                                                    >
-                                                        Edit
-                                                    </button>
+                                                {/* MANAGER ACTION */}
+                                                {role === 'manager' && req.status === 'pending_manager' && (
+                                                    <>
+                                                        <button onClick={() => handleAction(req, 'approve')}>
+                                                            <Check size={16} />
+                                                        </button>
+                                                        <button onClick={() => handleAction(req, 'reject')}>
+                                                            <Ban size={16} />
+                                                        </button>
+                                                    </>
                                                 )}
+
+
+                                                {role === 'employee' &&
+                                                    req.status === 'pending_leader' &&
+                                                    req.employeeId === user?.uid && (
+                                                        <button>Edit</button>
+                                                    )
+                                                }
+
                                             </div>
                                         </td>
                                     </tr>
