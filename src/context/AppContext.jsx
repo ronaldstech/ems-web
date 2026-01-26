@@ -200,8 +200,8 @@ export const AppProvider = ({ children }) => {
     const addRequisition = async (requisition) => {
         try {
             await addDoc(collection(db, 'requisitions'), {
-                ...requisition,
-                status: 'pending',
+                status: 'pending_leader', // Default
+                ...requisition,           // Allow override
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             });
