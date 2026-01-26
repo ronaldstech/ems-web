@@ -730,5 +730,3 @@ const Requisitions = () => {
 };
 
 export default Requisitions;
-
-

@@ -7,19 +7,19 @@ const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
     const [user, setUser] = useState(null);
-    const [userData, setUserData] = useState(null); // Stores extended profile (role, etc.)
+    const [userData, setUserData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [companies, setCompanies] = useState([]);
     const [employees, setEmployees] = useState([]);
     const [departments, setDepartments] = useState([]);
-    const [requisitions, setRequisitions] = useState([]); // New State
+    const [requisitions, setRequisitions] = useState([]);
+    const [invoices, setInvoices] = useState([]);
 
     useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
             setUser(currentUser);
 
             if (currentUser) {
-                // Fetch user profile from employees collection by authUid (Real-time)
                 const q = query(collection(db, "employees"), where("authUid", "==", currentUser.uid));
                 const unsubscribeUser = onSnapshot(q, (snapshot) => {
                     if (!snapshot.empty) {
@@ -88,25 +88,37 @@ export const AppProvider = ({ children }) => {
             console.error("Error fetching requisitions:", error);
         });
 
+        // Real-time listener for invoices
+        const qInvoices = query(collection(db, "invoices"), orderBy("createdAt", "desc"));
+        const unsubscribeInvoices = onSnapshot(qInvoices, (snapshot) => {
+            const invoicesData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            setInvoices(invoicesData);
+        }, (error) => {
+            console.error("Error fetching invoices:", error);
+        });
+
         return () => {
             unsubscribeAuth();
             unsubscribeCompanies();
             unsubscribeEmployees();
             unsubscribeDepartments();
             unsubscribeRequisitions();
+            unsubscribeInvoices();
         };
     }, []);
 
     const addCompany = async (company) => {
         try {
-            // Generate automatic registration number: EMS-{YEAR}-{RANDOM}
             const year = new Date().getFullYear();
-            const random = Math.floor(1000 + Math.random() * 9000); // 4 digit random
+            const random = Math.floor(1000 + Math.random() * 9000);
             const registrationNumber = `EMS-${year}-${random}`;
 
             await addDoc(collection(db, 'companies'), {
                 ...company,
-                registrationNumber, // Overwrite/Ensure unique ID
+                registrationNumber,
                 createdAt: new Date().toISOString()
             });
         } catch (error) {
@@ -196,12 +208,11 @@ export const AppProvider = ({ children }) => {
         }
     };
 
-    // Requisition Operations
     const addRequisition = async (requisition) => {
         try {
             await addDoc(collection(db, 'requisitions'), {
-                status: 'pending_leader', // Default
-                ...requisition,           // Allow override
+                status: 'pending_leader',
+                ...requisition,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             });
@@ -233,6 +244,42 @@ export const AppProvider = ({ children }) => {
         }
     };
 
+    const addInvoice = async (invoice) => {
+        try {
+            await addDoc(collection(db, 'invoices'), {
+                status: 'Draft',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                ...invoice
+            });
+        } catch (error) {
+            console.error("Error adding invoice:", error);
+            throw error;
+        }
+    };
+
+    const updateInvoice = async (id, updatedData) => {
+        try {
+            const invoiceRef = doc(db, 'invoices', id);
+            await updateDoc(invoiceRef, {
+                ...updatedData,
+                updatedAt: new Date().toISOString()
+            });
+        } catch (error) {
+            console.error("Error updating invoice:", error);
+            throw error;
+        }
+    };
+
+    const deleteInvoice = async (id) => {
+        try {
+            await deleteDoc(doc(db, 'invoices', id));
+        } catch (error) {
+            console.error("Error deleting invoice:", error);
+            throw error;
+        }
+    };
+
     const login = (email, password) => {
         return signInWithEmailAndPassword(auth, email, password);
     };
@@ -259,12 +306,16 @@ export const AppProvider = ({ children }) => {
             addDepartment,
             updateDepartment,
             deleteDepartment,
-            requisitions, // Export state
-            addRequisition, // Export CRUD
-            updateRequisition, // Export CRUD
-            deleteRequisition, // Export CRUD
+            requisitions,
+            addRequisition,
+            updateRequisition,
+            deleteRequisition,
+            invoices,
+            addInvoice,
+            updateInvoice,
+            deleteInvoice,
             user,
-            userData, // Expose extended profile
+            userData,
             login,
             logout,
             loading

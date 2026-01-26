@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import Attendance from './pages/Attendance'; // New
 import MyTeam from './pages/MyTeam'; // New
 import Requisitions from './pages/Requisitions'; // New
+import Invoices from './pages/Invoices'; // Added Invoices
 import { Toaster } from 'react-hot-toast';
 import { useApp } from './context/AppContext';
 import './App.css';
@@ -111,7 +112,7 @@ function App() {
           } />
           <Route path="/invoices" element={
             <ProtectedRoute allowedRoles={['admin', 'manager', 'employee']}>
-              <div className='card'><h2>Invoices</h2><p>Coming Soon</p></div>
+              <Invoices />
             </ProtectedRoute>
           } />
           <Route path="/requisitions" element={
