@@ -46,7 +46,9 @@ const Invoices = () => {
 
     const visibleInvoices = invoices.filter(inv => {
         if (role === 'admin') return true;
-        if (role === 'manager') return inv.companyId === userData?.companyId && inv.status !== 'Draft';
+        if (role === 'manager' || role === 'team_leader') {
+            return inv.companyId === userData?.companyId && inv.status !== 'Draft';
+        }
         if (role === 'employee') return inv.employeeId === user?.uid;
         return false;
     }).filter(inv => {

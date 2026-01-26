@@ -39,7 +39,7 @@ const Sidebar = ({ className, onClose }) => {
     { to: '/requisitions', icon: ClipboardList, label: 'Requisitions', roles: ['admin', 'manager', 'team_leader', 'employee'], badge: pendingCount },
     { to: '/attendance', icon: Clock, label: 'Check In/Out', roles: ['employee'] }, // New
     { to: '/my-team', icon: UserCheck, label: 'Team', roles: ['employee'] }, // New
-    { to: '/invoices', icon: FileText, label: 'Invoices', roles: ['admin', 'manager', 'employee'] }, // Added employee
+    { to: '/invoices', icon: FileText, label: 'Invoices', roles: ['admin', 'manager', 'team_leader', 'employee'] }, // Added team_leader
     { to: '/companies', icon: Building2, label: 'Companies', roles: ['admin'] },
     { to: '/employees', icon: Users, label: 'Employees', roles: ['admin', 'manager'] },
     { to: '/departments', icon: ClipboardList, label: 'Departments', roles: ['admin', 'manager', 'team_leader'] },
