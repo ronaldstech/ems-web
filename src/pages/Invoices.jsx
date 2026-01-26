@@ -254,36 +254,58 @@ const Invoices = () => {
             </div>
 
             {/* Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '1.5rem' }}>
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 400px), 1fr))',
+                gap: '1.5rem'
+            }}>
                 {visibleInvoices.map(inv => (
-                    <div key={inv.id} className="card fade-in" style={{ padding: '1.5rem', background: 'white' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
-                            <div>
-                                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>{inv.clientName}</h3>
-                                <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '0.85rem' }}>{inv.invoiceNumber}</p>
+                    <div key={inv.id} className="card fade-in" style={{ padding: '1.5rem', background: 'white', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', gap: '1rem' }}>
+                            <div style={{ flex: 1 }}>
+                                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, lineHeight: 1.2 }}>{inv.clientName}</h3>
+                                <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '0.8rem', fontWeight: 600 }}>{inv.invoiceNumber}</p>
                             </div>
-                            <StatusBadge status={inv.status} />
+                            <div style={{ flexShrink: 0 }}>
+                                <StatusBadge status={inv.status} />
+                            </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f8fafc', borderRadius: '12px' }}>
+                        <div style={{
+                            display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem',
+                            marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f8fafc',
+                            borderRadius: '16px', border: '1px solid #f1f5f9'
+                        }}>
                             <div>
-                                <p style={{ margin: 0, fontSize: '0.7rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Total Amount</p>
+                                <p style={{ margin: '0 0 4px 0', fontSize: '0.65rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Amount</p>
                                 <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#1e293b' }}>MK {inv.total.toLocaleString()}</p>
                             </div>
                             <div>
-                                <p style={{ margin: 0, fontSize: '0.7rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Date</p>
-                                <p style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>{inv.invoiceDate}</p>
+                                <p style={{ margin: '0 0 4px 0', fontSize: '0.65rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date</p>
+                                <p style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: '#475569' }}>{inv.invoiceDate}</p>
                             </div>
                         </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                                <strong>Items:</strong> {inv.items?.length || 0}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: '8px',
+                                padding: '6px 12px', backgroundColor: '#f1f5f9', borderRadius: '10px'
+                            }}>
+                                <FileText size={14} color="#64748b" />
+                                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b' }}>
+                                    {inv.items?.length || 0} {inv.items?.length === 1 ? 'item' : 'items'}
+                                </span>
                             </div>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                                 <button
                                     onClick={() => generatePDF(inv)}
-                                    style={{ padding: '8px', borderRadius: '10px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer' }}
+                                    style={{
+                                        width: '40px', height: '40px', borderRadius: '12px',
+                                        border: '1px solid #e2e8f0', background: 'white',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        cursor: 'pointer', transition: 'all 0.2s'
+                                    }}
+                                    className="hover-subtle"
                                     title="Download PDF"
                                 >
                                     <Download size={18} color="#2563eb" />
@@ -292,14 +314,24 @@ const Invoices = () => {
                                     <>
                                         <button
                                             onClick={() => handleStatusChange(inv, 'Submitted')}
-                                            style={{ padding: '8px', borderRadius: '10px', border: 'none', background: '#dcfce7', color: '#166534', cursor: 'pointer' }}
+                                            style={{
+                                                width: '40px', height: '40px', borderRadius: '12px',
+                                                border: 'none', background: '#dcfce7', color: '#166534',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                cursor: 'pointer'
+                                            }}
                                             title="Submit for Review"
                                         >
                                             <Send size={18} />
                                         </button>
                                         <button
                                             onClick={() => deleteInvoice(inv.id)}
-                                            style={{ padding: '8px', borderRadius: '10px', border: 'none', background: '#fee2e2', color: '#991b1b', cursor: 'pointer' }}
+                                            style={{
+                                                width: '40px', height: '40px', borderRadius: '12px',
+                                                border: 'none', background: '#fee2e2', color: '#991b1b',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                cursor: 'pointer'
+                                            }}
                                             title="Delete"
                                         >
                                             <Trash2 size={18} />
@@ -316,78 +348,140 @@ const Invoices = () => {
             {isModalOpen && (
                 <div className="modal-overlay">
                     <div className="fade-in" style={{
-                        backgroundColor: 'rgba(255,255,255,0.98)', backdropFilter: 'blur(16px)', borderRadius: '24px',
-                        maxWidth: '800px', width: '95%', padding: '0', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                        maxHeight: '90vh', display: 'flex', flexDirection: 'column'
+                        backgroundColor: 'rgba(255,255,255,0.98)', backdropFilter: 'blur(20px)',
+                        borderRadius: '24px', maxWidth: '900px', width: '95%', padding: '0',
+                        overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                        maxHeight: '90vh', display: 'flex', flexDirection: 'column',
+                        margin: '20px'
                     }}>
-                        <div style={{ padding: '1.5rem 2rem', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{
+                            padding: '1.5rem 2rem', borderBottom: '1px solid #f1f5f9',
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                        }}>
                             <div>
-                                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>Create New Invoice</h3>
-                                <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>Fill in the details to generate your invoice</p>
+                                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#1e293b' }}>Create New Invoice</h3>
+                                <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>Generate a professional billing statement</p>
                             </div>
-                            <button onClick={resetForm} style={{ border: 'none', background: '#f1f5f9', padding: '8px', borderRadius: '10px', cursor: 'pointer' }}><X size={20} /></button>
+                            <button onClick={resetForm} style={{
+                                width: '36px', height: '36px', borderRadius: '10px',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b'
+                            }}>
+                                <X size={20} />
+                            </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} style={{ padding: '2rem', overflowY: 'auto' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.5rem' }}>Client Name</label>
-                                    <input required placeholder="Client / Company Name" value={formData.clientName} onChange={e => setFormData({ ...formData, clientName: e.target.value })} style={{ width: '100%', padding: '0.8rem', borderRadius: '12px', border: '1px solid #e2e8f0' }} />
+                        <form onSubmit={handleSubmit} style={{ padding: '2rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                                gap: '1.5rem'
+                            }}>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem' }}>Client Name</label>
+                                    <input required placeholder="Client / Company Name" value={formData.clientName} onChange={e => setFormData({ ...formData, clientName: e.target.value })} style={{ width: '100%', padding: '0.875rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem' }} />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.5rem' }}>Invoice Date</label>
-                                    <input type="date" value={formData.invoiceDate} onChange={e => setFormData({ ...formData, invoiceDate: e.target.value })} style={{ width: '100%', padding: '0.8rem', borderRadius: '12px', border: '1px solid #e2e8f0' }} />
+                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem' }}>Invoice Date</label>
+                                    <input type="date" value={formData.invoiceDate} onChange={e => setFormData({ ...formData, invoiceDate: e.target.value })} style={{ width: '100%', padding: '0.875rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem' }} />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.5rem' }}>Due Date</label>
-                                    <input type="date" value={formData.dueDate} onChange={e => setFormData({ ...formData, dueDate: e.target.value })} style={{ width: '100%', padding: '0.8rem', borderRadius: '12px', border: '1px solid #e2e8f0' }} />
+                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem' }}>Due Date</label>
+                                    <input type="date" value={formData.dueDate} onChange={e => setFormData({ ...formData, dueDate: e.target.value })} style={{ width: '100%', padding: '0.875rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem' }} />
                                 </div>
                             </div>
 
-                            <div style={{ marginBottom: '1.5rem' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                    <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Line Items</label>
-                                    <button type="button" onClick={handleAddItem} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 700, color: '#2563eb', border: 'none', background: 'none', cursor: 'pointer' }}>
+                            <div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                                    <label style={{ fontSize: '0.9rem', fontWeight: 800, color: '#1e293b' }}>Line Items</label>
+                                    <button type="button" onClick={handleAddItem} style={{
+                                        display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem',
+                                        fontWeight: 700, color: '#2563eb', border: 'none', background: '#eff6ff',
+                                        padding: '0.5rem 1rem', borderRadius: '10px', cursor: 'pointer'
+                                    }}>
                                         <PlusCircle size={16} /> Add Item
                                     </button>
                                 </div>
-                                {formData.items.map((item, index) => (
-                                    <div key={index} style={{ display: 'grid', gridTemplateColumns: '2fr 80px 150px 1fr 40px', gap: '1rem', marginBottom: '0.75rem', alignItems: 'center' }}>
-                                        <input placeholder="Description" required value={item.description} onChange={e => handleItemChange(index, 'description', e.target.value)} style={{ padding: '0.7rem', borderRadius: '10px', border: '1px solid #e2e8f0' }} />
-                                        <input type="number" placeholder="Qty" required value={item.quantity} onChange={e => handleItemChange(index, 'quantity', Number(e.target.value))} style={{ padding: '0.7rem', borderRadius: '10px', border: '1px solid #e2e8f0' }} />
-                                        <input type="number" placeholder="Price" required value={item.unitPrice} onChange={e => handleItemChange(index, 'unitPrice', Number(e.target.value))} style={{ padding: '0.7rem', borderRadius: '10px', border: '1px solid #e2e8f0' }} />
-                                        <div style={{ fontSize: '0.85rem', fontWeight: 700, textAlign: 'right' }}>MK {(item.quantity * item.unitPrice).toLocaleString()}</div>
-                                        <button type="button" onClick={() => handleRemoveItem(index)} disabled={formData.items.length === 1} style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', opacity: formData.items.length === 1 ? 0.3 : 1 }}>
-                                            <MinusCircle size={20} />
-                                        </button>
-                                    </div>
-                                ))}
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    {formData.items.map((item, index) => (
+                                        <div key={index} style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                                            gap: '1rem', padding: '1.25rem', background: '#f8fafc',
+                                            borderRadius: '16px', border: '1px solid #f1f5f9',
+                                            position: 'relative'
+                                        }}>
+                                            <div style={{ flex: '2 1 200px' }}>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', marginBottom: '4px', textTransform: 'uppercase' }}>Description</label>
+                                                <input placeholder="e.g. Graphic Design" required value={item.description} onChange={e => handleItemChange(index, 'description', e.target.value)} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0', background: 'white' }} />
+                                            </div>
+                                            <div style={{ flex: '0.5 1 80px' }}>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', marginBottom: '4px', textTransform: 'uppercase' }}>Qty</label>
+                                                <input type="number" min="1" placeholder="1" required value={item.quantity} onChange={e => handleItemChange(index, 'quantity', Number(e.target.value))} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0', background: 'white' }} />
+                                            </div>
+                                            <div style={{ flex: '1 1 120px' }}>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', marginBottom: '4px', textTransform: 'uppercase' }}>Unit Price</label>
+                                                <div style={{ position: 'relative' }}>
+                                                    <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: '#94a3b8', fontSize: '0.8rem' }}>MK</span>
+                                                    <input type="number" placeholder="0" required value={item.unitPrice} onChange={e => handleItemChange(index, 'unitPrice', Number(e.target.value))} style={{ width: '100%', padding: '0.75rem 0.75rem 0.75rem 2rem', borderRadius: '10px', border: '1px solid #e2e8f0', background: 'white' }} />
+                                                </div>
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', textAlign: 'right', gap: '4px' }}>
+                                                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Amount</span>
+                                                <span style={{ fontSize: '1rem', fontWeight: 800, color: '#1e293b' }}>MK {(item.quantity * item.unitPrice).toLocaleString()}</span>
+                                            </div>
+                                            {formData.items.length > 1 && (
+                                                <button type="button" onClick={() => handleRemoveItem(index)} style={{
+                                                    position: 'absolute', top: '-10px', right: '-10px', width: '28px', height: '28px',
+                                                    borderRadius: '50%', background: '#fee2e2', color: '#ef4444', border: 'none',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                                                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
+                                                }}>
+                                                    <MinusCircle size={18} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 250px', gap: '3rem', borderTop: '1px solid #f1f5f9', paddingTop: '1.5rem' }}>
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                                gap: '2rem', marginTop: '1rem', borderTop: '1px solid #f1f5f9', paddingTop: '2rem'
+                            }}>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.5rem' }}>Notes</label>
-                                    <textarea placeholder="Bank details, terms, etc." rows={3} value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} style={{ width: '100%', padding: '0.8rem', borderRadius: '12px', border: '1px solid #e2e8f0', resize: 'none' }} />
+                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem' }}>Notes / Payment Info</label>
+                                    <textarea placeholder="e.g. Bank Account details, payment terms..." rows={4} value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} style={{ width: '100%', padding: '1rem', borderRadius: '16px', border: '1px solid #e2e8f0', resize: 'none', fontSize: '0.95rem' }} />
                                 </div>
-                                <div style={{ backgroundColor: '#f8fafc', padding: '1.5rem', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#64748b' }}>
-                                        <span>Subtotal</span>
-                                        <span style={{ fontWeight: 700 }}>MK {calculateSubtotal(formData.items).toLocaleString()}</span>
+                                <div style={{
+                                    backgroundColor: '#f8fafc', padding: '2rem', borderRadius: '20px',
+                                    display: 'flex', flexDirection: 'column', gap: '1rem',
+                                    border: '1px solid #f1f5f9'
+                                }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', color: '#64748b' }}>
+                                        <span style={{ fontWeight: 500 }}>Subtotal</span>
+                                        <span style={{ fontWeight: 800, color: '#1e293b' }}>MK {calculateSubtotal(formData.items).toLocaleString()}</span>
                                     </div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Tax (%)</span>
-                                        <input type="number" value={formData.taxRate} onChange={e => setFormData({ ...formData, taxRate: Number(e.target.value) })} style={{ width: '60px', padding: '4px 8px', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'right' }} />
+                                        <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#64748b' }}>Tax (%)</span>
+                                        <input type="number" value={formData.taxRate} onChange={e => setFormData({ ...formData, taxRate: Number(e.target.value) })} style={{ width: '70px', padding: '6px 10px', borderRadius: '10px', border: '1px solid #e2e8f0', textAlign: 'right', fontWeight: 700 }} />
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1rem', fontWeight: 800, color: '#0f172a', borderTop: '1px solid #e2e8f0', paddingTop: '0.75rem', marginTop: '0.5rem' }}>
-                                        <span>Total</span>
+                                    <div style={{
+                                        display: 'flex', justifyContent: 'space-between', fontSize: '1.25rem',
+                                        fontWeight: 900, color: '#0f172a', borderTop: '2px dashed #e2e8f0',
+                                        paddingTop: '1rem', marginTop: '0.5rem'
+                                    }}>
+                                        <span>Total Due</span>
                                         <span style={{ color: '#2563eb' }}>MK {calculateTotal(calculateSubtotal(formData.items), calculateTax(calculateSubtotal(formData.items), formData.taxRate)).toLocaleString()}</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2.5rem' }}>
-                                <button type="button" onClick={resetForm} style={{ padding: '0.85rem 2rem', borderRadius: '14px', border: '1px solid #e2e8f0', background: 'white', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
-                                <button type="submit" style={{ padding: '0.85rem 2.5rem', borderRadius: '14px', border: 'none', background: '#2563eb', color: 'white', fontWeight: 700, cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(37, 99, 235, 0.2)' }}>Save as Draft</button>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
+                                <button type="button" onClick={resetForm} style={{ padding: '0.875rem 2.25rem', borderRadius: '16px', border: '1px solid #e2e8f0', background: 'white', color: '#475569', fontWeight: 700, cursor: 'pointer', fontSize: '0.95rem' }}>Cancel</button>
+                                <button type="submit" style={{ padding: '0.875rem 3rem', borderRadius: '16px', border: 'none', background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', color: 'white', fontWeight: 800, cursor: 'pointer', fontSize: '0.95rem', boxShadow: '0 10px 15px -3px rgba(37, 99, 235, 0.2)' }}>Save as Draft</button>
                             </div>
                         </form>
                     </div>
