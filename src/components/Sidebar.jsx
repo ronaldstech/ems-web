@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, Building2, Users, FileText, ClipboardList, LogOut, Clock, UserCheck, Calendar } from 'lucide-react'; // Added Calendar
+import { Home, Building2, Users, FileText, ClipboardList, LogOut, Clock, UserCheck, Calendar, Settings as SettingsIcon } from 'lucide-react'; // Added Calendar, SettingsIcon
 
 import clsx from 'clsx';
 import { useApp } from '../context/AppContext';
@@ -34,6 +34,7 @@ const Sidebar = ({ className, onClose }) => {
 
   const pendingCount = getPendingRequisitionsCount();
 
+
   const allNavItems = [
     { to: '/', icon: Home, label: 'Dashboard', roles: ['admin', 'manager', 'team_leader', 'employee', 'contractor'] },
     { to: '/requisitions', icon: ClipboardList, label: 'Requisitions', roles: ['admin', 'manager', 'team_leader', 'employee'], badge: pendingCount },
@@ -42,6 +43,7 @@ const Sidebar = ({ className, onClose }) => {
     { to: '/my-team', icon: UserCheck, label: 'Team', roles: ['employee'] }, // New
     { to: '/invoices', icon: FileText, label: 'Invoices', roles: ['admin', 'manager', 'team_leader', 'employee'] }, // Added team_leader
     { to: '/profile', icon: Users, label: 'Profile', roles: ['manager', 'team_leader', 'employee'] },
+    { to: '/settings', icon: SettingsIcon, label: 'Settings', roles: ['manager'] },
     { to: '/companies', icon: Building2, label: 'Companies', roles: ['admin'] },
     { to: '/employees', icon: Users, label: 'Employees', roles: ['admin', 'manager'] },
     { to: '/departments', icon: ClipboardList, label: 'Departments', roles: ['admin', 'manager', 'team_leader'] },

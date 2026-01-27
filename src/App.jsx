@@ -11,6 +11,7 @@ import MyTeam from './pages/MyTeam'; // New
 import Requisitions from './pages/Requisitions'; // New
 import Invoices from './pages/Invoices'; // Added Invoices
 import Profile from './pages/Profile'; // Added Profile
+import Settings from './pages/Settings'; // Added Settings
 import { Toaster } from 'react-hot-toast';
 import { useApp } from './context/AppContext';
 import './App.css';
@@ -130,6 +131,11 @@ function App() {
           <Route path="/profile" element={
             <ProtectedRoute allowedRoles={['manager', 'team_leader', 'employee']}>
               <Profile />
+            </ProtectedRoute>
+          } />
+          <Route path="/settings" element={
+            <ProtectedRoute allowedRoles={['manager']}>
+              <Settings />
             </ProtectedRoute>
           } />
           <Route path="*" element={<Navigate to="/" replace />} />
