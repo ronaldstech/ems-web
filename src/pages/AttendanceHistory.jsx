@@ -72,20 +72,30 @@ const AttendanceHistory = () => {
             }
         }
 
-        // Header
-        doc.setFontSize(24);
+        // Header Logic
+        const showDept = (role === 'manager' && deptFilter) || (role === 'team_leader');
+        const activeDept = showDept ? (departments.find(d => d.id === (deptFilter || userData?.departmentId))?.name) : null;
+
+        doc.setFontSize(26);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(30, 41, 59);
-        // Center the title. If logo is present, it ends at y=40.
-        doc.text("Attendance Timesheet", 297 / 2, yPos > 30 ? 25 : 15, { align: "center" });
+        // Main Heading: Company Name
+        doc.text(company?.name || 'EMS Timesheet', 297 / 2, yPos > 30 ? 25 : 15, { align: "center" });
 
-        doc.setFontSize(10);
+        doc.setFontSize(12);
         doc.setFont("helvetica", "normal");
         doc.setTextColor(100, 116, 139);
-        doc.text(`${company?.name || 'N/A'}`, 283, yPos > 30 ? 20 : 15, { align: "right" });
-        doc.text(`Department: ${department?.name || 'N/A'}`, 283, yPos > 30 ? 25 : 20, { align: "right" });
+        // Subtitle: Timesheet Attendance (smaller)
+        doc.text("Timesheet Attendance", 297 / 2, yPos > 30 ? 32 : 22, { align: "center" });
+
+        doc.setFontSize(10);
         doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, yPos);
         doc.text(`Period: ${timeRange.charAt(0).toUpperCase() + timeRange.slice(1)}`, 14, yPos + 5);
+
+        // Conditionally show Department
+        if (showDept && activeDept) {
+            doc.text(`Department: ${activeDept}`, 283, yPos > 30 ? 25 : 20, { align: "right" });
+        }
 
         const tableColumn = ["Employee", "Month", "Day", "Date", "Check In", "Check Out", "Total Worked", "Lunch", "Normal", "OT"];
         const tableRows = [];

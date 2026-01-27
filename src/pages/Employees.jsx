@@ -72,6 +72,8 @@ const Employees = () => {
     const [editingId, setEditingId] = useState(null);
     const [deletingId, setDeletingId] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedEmployee, setSelectedEmployee] = useState(null); // For detail modal
+    const { calculateProfileCompletion } = useApp();
 
     const [formData, setFormData] = useState({
         firstName: '',
@@ -263,6 +265,7 @@ const Employees = () => {
                                 <th style={thStyle}>Role</th>
                                 <th style={thStyle}>Company</th>
                                 <th style={thStyle}>Department</th>
+                                <th style={thStyle}>Profile</th>
                                 <th style={thStyle}>Contact</th>
                                 <th style={{ ...thStyle, textAlign: 'right' }}>Actions</th>
                             </tr>
@@ -305,6 +308,28 @@ const Employees = () => {
                                                 <Briefcase size={14} />
                                                 {employee.department || '-'}
                                             </div>
+                                        </td>
+                                        <td style={{ padding: '1.25rem' }}>
+                                            {(() => {
+                                                const { percentage } = calculateProfileCompletion(employee);
+                                                let color = '#ef4444'; // Red
+                                                if (percentage > 50) color = '#f59e0b'; // Amber
+                                                if (percentage === 100) color = '#22c55e'; // Green
+
+                                                return (
+                                                    <div
+                                                        onClick={() => setSelectedEmployee(employee)}
+                                                        style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '4px', width: '80px' }}
+                                                    >
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', fontWeight: 700, color }}>
+                                                            <span>{percentage}%</span>
+                                                        </div>
+                                                        <div style={{ height: '6px', background: '#f1f5f9', borderRadius: '3px', overflow: 'hidden' }}>
+                                                            <div style={{ width: `${percentage}%`, height: '100%', background: color, transition: 'width 0.3s ease' }} />
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
                                         </td>
                                         <td style={{ padding: '1.25rem', color: '#64748b' }}>
                                             {employee.phone ? (
@@ -500,6 +525,102 @@ const Employees = () => {
                     </div>
                 </div>
             )}
+
+            {/* Profile Detail Modal */}
+            {selectedEmployee && (() => {
+                const { percentage, missingFields } = calculateProfileCompletion(selectedEmployee);
+                const fieldMappings = [
+                    { key: 'firstName', label: 'First Name' },
+                    { key: 'lastName', label: 'Last Name' },
+                    { key: 'phone', label: 'Phone Number' },
+                    { key: 'address', label: 'Physical Address' },
+                    { key: 'departmentId', label: 'Department' },
+                    { key: 'idNumber', label: 'ID/National Number' },
+                    { key: 'expiryDate', label: 'ID Expiry Date' },
+                    { key: 'photoUrl', label: 'Profile Photo' },
+                    { key: 'idFrontUrl', label: 'ID Front Scan' },
+                    { key: 'idBackUrl', label: 'ID Back Scan' }
+                ];
+
+                return (
+                    <div style={overlayStyle}>
+                        <div style={{ ...modalCardStyle, maxWidth: '500px' }}>
+                            <div style={modalHeaderStyle}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <Avatar firstName={selectedEmployee.firstName} lastName={selectedEmployee.lastName} />
+                                    <div>
+                                        <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{selectedEmployee.firstName} {selectedEmployee.lastName}</h3>
+                                        <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>Profile Completion Status</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setSelectedEmployee(null)} style={closeBtnStyle}><X size={20} /></button>
+                            </div>
+                            <div style={{ padding: '1.5rem' }}>
+                                <div style={{ marginBottom: '2rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                        <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#1e293b' }}>Overall Progress</span>
+                                        <span style={{ fontSize: '1rem', fontWeight: 800, color: percentage === 100 ? '#22c55e' : '#2563eb' }}>{percentage}%</span>
+                                    </div>
+                                    <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '5px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                                        <div style={{
+                                            width: `${percentage}%`,
+                                            height: '100%',
+                                            background: percentage === 100 ? '#22c55e' : 'linear-gradient(90deg, #2563eb, #6366f1)',
+                                            transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
+                                        }} />
+                                    </div>
+                                </div>
+
+                                <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    Field Verification
+                                </h4>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem', maxHeight: '300px', overflowY: 'auto', paddingRight: '8px' }}>
+                                    {fieldMappings.map(field => {
+                                        const isFilled = selectedEmployee[field.key] && selectedEmployee[field.key] !== '';
+                                        return (
+                                            <div key={field.key} style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                padding: '0.75rem',
+                                                borderRadius: '10px',
+                                                background: isFilled ? '#f0fdf4' : '#fff1f2',
+                                                border: `1px solid ${isFilled ? '#dcfce7' : '#ffe4e6'}`
+                                            }}>
+                                                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: isFilled ? '#166534' : '#991b1b' }}>
+                                                    {field.label}
+                                                </span>
+                                                <div style={{
+                                                    width: '20px',
+                                                    height: '20px',
+                                                    borderRadius: '50%',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    backgroundColor: isFilled ? '#22c55e' : '#ef4444',
+                                                    color: 'white'
+                                                }}>
+                                                    {isFilled ? '✓' : '×'}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                <div style={modalFooterStyle}>
+                                    <button
+                                        onClick={() => setSelectedEmployee(null)}
+                                        style={{ ...submitBtnStyle, width: '100%' }}
+                                    >
+                                        Close Details
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
 
             <style>{`
                 .row-hover:hover { background-color: #fbfcfd !important; }

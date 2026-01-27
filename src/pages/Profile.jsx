@@ -4,7 +4,7 @@ import { Camera, Upload, User, Mail, Phone, MapPin, Briefcase, Shield, Save, Loa
 import toast from 'react-hot-toast';
 
 const Profile = () => {
-    const { userData, updateUserProfile, uploadToExternalServer, departments } = useApp();
+    const { userData, updateUserProfile, uploadToExternalServer, departments, calculateProfileCompletion } = useApp();
     const [loading, setLoading] = useState(false);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [uploadingFront, setUploadingFront] = useState(false);
@@ -27,27 +27,7 @@ const Profile = () => {
         expiryDate: ''
     });
 
-    const calculateCompletion = () => {
-        if (!userData) return 0;
-
-        const fields = [
-            userData.firstName,
-            userData.lastName,
-            userData.phone,
-            userData.address,
-            userData.departmentId,
-            userData.idNumber,
-            userData.expiryDate,
-            userData.photoUrl,
-            userData.idFrontUrl,
-            userData.idBackUrl
-        ];
-
-        const filledFields = fields.filter(field => field && field !== '').length;
-        return Math.round((filledFields / fields.length) * 100);
-    };
-
-    const profileCompletion = calculateCompletion();
+    const { percentage: profileCompletion } = calculateProfileCompletion(userData);
 
     useEffect(() => {
         if (userData) {

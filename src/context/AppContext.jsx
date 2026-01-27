@@ -429,6 +429,32 @@ export const AppProvider = ({ children }) => {
         }
     };
 
+    const calculateProfileCompletion = (user) => {
+        if (!user) return { percentage: 0, missingFields: [] };
+
+        const fieldMappings = [
+            { key: 'firstName', label: 'First Name' },
+            { key: 'lastName', label: 'Last Name' },
+            { key: 'phone', label: 'Phone Number' },
+            { key: 'address', label: 'Physical Address' },
+            { key: 'departmentId', label: 'Department' },
+            { key: 'idNumber', label: 'ID/National Number' },
+            { key: 'expiryDate', label: 'ID Expiry Date' },
+            { key: 'photoUrl', label: 'Profile Photo' },
+            { key: 'idFrontUrl', label: 'ID Front Scan' },
+            { key: 'idBackUrl', label: 'ID Back Scan' }
+        ];
+
+        const missingFields = fieldMappings
+            .filter(field => !user[field.key] || user[field.key] === '')
+            .map(field => field.label);
+
+        const filledCount = fieldMappings.length - missingFields.length;
+        const percentage = Math.round((filledCount / fieldMappings.length) * 100);
+
+        return { percentage, missingFields };
+    };
+
     const login = (email, password) => {
         return signInWithEmailAndPassword(auth, email, password);
     };
@@ -471,6 +497,7 @@ export const AppProvider = ({ children }) => {
             checkOut,
             user,
             userData,
+            calculateProfileCompletion,
             login,
             logout,
             loading
