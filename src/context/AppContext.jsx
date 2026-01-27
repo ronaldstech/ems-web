@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { auth, db } from '../firebase';
+import { auth, db, storage } from '../firebase';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, orderBy, where, getDocs } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const AppContext = createContext();
 
@@ -280,6 +281,78 @@ export const AppProvider = ({ children }) => {
         }
     };
 
+    const uploadFile = async (file, path) => {
+        try {
+            const storageRef = ref(storage, path);
+            await uploadBytes(storageRef, file);
+            const downloadURL = await getDownloadURL(storageRef);
+            return downloadURL;
+        } catch (error) {
+            console.error("Error uploading file:", error);
+            throw error;
+        }
+    };
+
+    /**
+     * Uploads a file to an external PHP server
+     * @param {File} file The file to upload
+     * @param {Function} onProgress Optional callback for progress updates
+     * @returns {Promise<string>} The URL of the uploaded file
+     */
+    const uploadToExternalServer = (file, onProgress) => {
+        return new Promise((resolve, reject) => {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const ENDPOINT = 'https://unimarket-mw.com/ems/upload.php';
+            const xhr = new XMLHttpRequest();
+
+            xhr.open('POST', ENDPOINT, true);
+
+            if (onProgress) {
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const percentComplete = (e.loaded / e.total) * 100;
+                        onProgress(percentComplete);
+                    }
+                };
+            }
+
+            xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        if (data.success && data.url) {
+                            resolve(data.url);
+                        } else {
+                            reject(new Error(data.message || 'Unknown server error'));
+                        }
+                    } catch (e) {
+                        reject(new Error('Failed to parse server response'));
+                    }
+                } else {
+                    reject(new Error('Server upload failed with status ' + xhr.status));
+                }
+            };
+
+            xhr.onerror = () => reject(new Error('Network error or CORS issue'));
+            xhr.send(formData);
+        });
+    };
+
+    const updateUserProfile = async (id, updatedData) => {
+        try {
+            const employeeRef = doc(db, 'employees', id);
+            await updateDoc(employeeRef, {
+                ...updatedData,
+                updatedAt: new Date().toISOString()
+            });
+        } catch (error) {
+            console.error("Error updating profile:", error);
+            throw error;
+        }
+    };
+
     const login = (email, password) => {
         return signInWithEmailAndPassword(auth, email, password);
     };
@@ -314,6 +387,9 @@ export const AppProvider = ({ children }) => {
             addInvoice,
             updateInvoice,
             deleteInvoice,
+            uploadFile,
+            uploadToExternalServer,
+            updateUserProfile,
             user,
             userData,
             login,
