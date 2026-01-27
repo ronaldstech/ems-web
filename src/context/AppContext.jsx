@@ -15,6 +15,7 @@ export const AppProvider = ({ children }) => {
     const [departments, setDepartments] = useState([]);
     const [requisitions, setRequisitions] = useState([]);
     const [invoices, setInvoices] = useState([]);
+    const [attendance, setAttendance] = useState([]);
 
     useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
@@ -101,6 +102,18 @@ export const AppProvider = ({ children }) => {
             console.error("Error fetching invoices:", error);
         });
 
+        // Real-time listener for attendance
+        const qAttendance = query(collection(db, "attendance"), orderBy("checkIn", "desc"));
+        const unsubscribeAttendance = onSnapshot(qAttendance, (snapshot) => {
+            const attendanceData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            setAttendance(attendanceData);
+        }, (error) => {
+            console.error("Error fetching attendance:", error);
+        });
+
         return () => {
             unsubscribeAuth();
             unsubscribeCompanies();
@@ -108,6 +121,7 @@ export const AppProvider = ({ children }) => {
             unsubscribeDepartments();
             unsubscribeRequisitions();
             unsubscribeInvoices();
+            unsubscribeAttendance();
         };
     }, []);
 
@@ -353,6 +367,68 @@ export const AppProvider = ({ children }) => {
         }
     };
 
+    const checkIn = async (employeeId, companyId, departmentId) => {
+        try {
+            const today = new Date().toISOString().split('T')[0];
+
+            // Check if already checked in today
+            const q = query(
+                collection(db, 'attendance'),
+                where('employeeId', '==', employeeId),
+                where('date', '==', today)
+            );
+            const snapshot = await getDocs(q);
+
+            if (!snapshot.empty) {
+                throw new Error("You have already checked in today.");
+            }
+
+            await addDoc(collection(db, 'attendance'), {
+                employeeId,
+                companyId,
+                departmentId,
+                date: today,
+                checkIn: new Date().toISOString(),
+                checkOut: null,
+                status: 'present'
+            });
+        } catch (error) {
+            console.error("Error checking in:", error);
+            throw error;
+        }
+    };
+
+    const checkOut = async (employeeId) => {
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            const q = query(
+                collection(db, 'attendance'),
+                where('employeeId', '==', employeeId),
+                where('date', '==', today)
+            );
+            const snapshot = await getDocs(q);
+
+            if (snapshot.empty) {
+                throw new Error("No check-in record found for today.");
+            }
+
+            const attendanceDoc = snapshot.docs[0];
+            const data = attendanceDoc.data();
+
+            if (data.checkOut) {
+                throw new Error("You have already checked out today.");
+            }
+
+            const attendanceRef = doc(db, 'attendance', attendanceDoc.id);
+            await updateDoc(attendanceRef, {
+                checkOut: new Date().toISOString()
+            });
+        } catch (error) {
+            console.error("Error checking out:", error);
+            throw error;
+        }
+    };
+
     const login = (email, password) => {
         return signInWithEmailAndPassword(auth, email, password);
     };
@@ -390,6 +466,9 @@ export const AppProvider = ({ children }) => {
             uploadFile,
             uploadToExternalServer,
             updateUserProfile,
+            attendance,
+            checkIn,
+            checkOut,
             user,
             userData,
             login,

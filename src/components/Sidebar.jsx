@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, Building2, Users, FileText, ClipboardList, LogOut, Clock, UserCheck } from 'lucide-react'; // Added icons
+import { Home, Building2, Users, FileText, ClipboardList, LogOut, Clock, UserCheck, Calendar } from 'lucide-react'; // Added Calendar
 
 import clsx from 'clsx';
 import { useApp } from '../context/AppContext';
@@ -37,7 +37,8 @@ const Sidebar = ({ className, onClose }) => {
   const allNavItems = [
     { to: '/', icon: Home, label: 'Dashboard', roles: ['admin', 'manager', 'team_leader', 'employee', 'contractor'] },
     { to: '/requisitions', icon: ClipboardList, label: 'Requisitions', roles: ['admin', 'manager', 'team_leader', 'employee'], badge: pendingCount },
-    { to: '/attendance', icon: Clock, label: 'Check In/Out', roles: ['employee'] }, // New
+    { to: '/attendance', icon: Clock, label: 'Check In/Out', roles: ['employee'], end: true },
+    { to: '/attendance/history', icon: Calendar, label: 'Attendance History', roles: ['manager', 'team_leader', 'employee'] },
     { to: '/my-team', icon: UserCheck, label: 'Team', roles: ['employee'] }, // New
     { to: '/invoices', icon: FileText, label: 'Invoices', roles: ['admin', 'manager', 'team_leader', 'employee'] }, // Added team_leader
     { to: '/profile', icon: Users, label: 'Profile', roles: ['manager', 'team_leader', 'employee'] },
@@ -85,6 +86,7 @@ const Sidebar = ({ className, onClose }) => {
             <NavLink
               key={item.to}
               to={item.to}
+              end={item.end}
               onClick={handleLinkClick}
               className={({ isActive }) =>
                 clsx('nav-link', isActive && 'active')

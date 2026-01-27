@@ -6,6 +6,7 @@ import Employees from './pages/Employees';
 import Departments from './pages/Departments';
 import Login from './pages/Login';
 import Attendance from './pages/Attendance'; // New
+import AttendanceHistory from './pages/AttendanceHistory'; // New
 import MyTeam from './pages/MyTeam'; // New
 import Requisitions from './pages/Requisitions'; // New
 import Invoices from './pages/Invoices'; // Added Invoices
@@ -102,8 +103,13 @@ function App() {
             </ProtectedRoute>
           } />
           <Route path="/attendance" element={
-            <ProtectedRoute allowedRoles={['employee']}>
+            <ProtectedRoute allowedRoles={['manager', 'team_leader', 'employee']}>
               <Attendance />
+            </ProtectedRoute>
+          } />
+          <Route path="/attendance/history" element={
+            <ProtectedRoute allowedRoles={['manager', 'team_leader', 'employee']}>
+              <AttendanceHistory />
             </ProtectedRoute>
           } />
           <Route path="/my-team" element={
