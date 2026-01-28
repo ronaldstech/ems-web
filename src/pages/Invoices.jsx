@@ -202,7 +202,7 @@ const Invoices = () => {
                     </p>
                 </div>
 
-                {role === 'employee' && (
+                {role !== 'manager' && (
                     <button
                         className="btn-primary"
                         onClick={() => setIsModalOpen(true)}

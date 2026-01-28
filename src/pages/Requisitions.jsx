@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Plus, X, Search, CheckCircle, XCircle, Clock, FileText, Ban, Check, DollarSign, Plane, Wallet, Package, Wrench, Monitor, GraduationCap } from 'lucide-react';
+import { Plus, X, Search, CheckCircle, XCircle, Clock, FileText, Ban, Check, DollarSign, Plane, Wallet, Package, Wrench, Monitor, GraduationCap, Calendar } from 'lucide-react';
 
 const StatusBadge = ({ status }) => {
     const styles = {
@@ -232,7 +232,8 @@ const RequisitionCard = ({ req, role, user, onEdit, onAction }) => {
 };
 
 const Requisitions = () => {
-    const { requisitions, addRequisition, updateRequisition, userData, user } = useApp();
+    const { requisitions, addRequisition, updateRequisition, leaveRequests, addLeaveRequest, updateLeaveRequest, userData, user } = useApp();
+    const [activeTab, setActiveTab] = useState('requisitions'); // 'requisitions' or 'leave'
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
     const [rejectReq, setRejectReq] = useState(null);
@@ -250,8 +251,16 @@ const Requisitions = () => {
         endDate: '',
     });
 
+    const [leaveFormData, setLeaveFormData] = useState({
+        leaveType: 'vacation',
+        startDate: '',
+        endDate: '',
+        reason: ''
+    });
+
     const role = userData?.role?.toLowerCase() || 'employee';
 
+    // Filter requisitions
     const visibleRequisitions = requisitions.filter(req => {
         if (role === 'admin') return true;
         if (role === 'manager') return req.companyId === userData?.companyId;
@@ -265,6 +274,23 @@ const Requisitions = () => {
             req.title?.toLowerCase().includes(search) ||
             req.employeeFName?.toLowerCase().includes(search) ||
             req.type?.toLowerCase().includes(search)
+        );
+    });
+
+    // Filter leave requests
+    const visibleLeaveRequests = leaveRequests.filter(req => {
+        if (role === 'admin') return true;
+        if (role === 'manager') return req.companyId === userData?.companyId;
+        if (role === 'team_leader') return req.companyId === userData?.companyId && req.departmentId === userData?.departmentId;
+        if (role === 'employee') return req.employeeId === user?.uid;
+        return false;
+    }).filter(req => {
+        if (filterStatus !== 'all' && req.status !== filterStatus) return false;
+        const search = searchTerm.toLowerCase();
+        return (
+            req.employeeName?.toLowerCase().includes(search) ||
+            req.leaveType?.toLowerCase().includes(search) ||
+            req.reason?.toLowerCase().includes(search)
         );
     });
 
@@ -295,9 +321,12 @@ const Requisitions = () => {
             if (editingId) {
                 await updateRequisition(editingId, { ...formData });
             } else {
+                // Determine initial status based on role
+                const initialStatus = role === 'team_leader' ? 'pending_manager' : 'pending_leader';
+
                 const newReq = {
                     ...formData,
-                    status: 'pending_leader',
+                    status: initialStatus,
                     employeeId: user?.uid,
                     employeeFName: userData.firstName || 'Unknown',
                     employeeLName: userData.lastName || 'User',
@@ -355,6 +384,51 @@ const Requisitions = () => {
         }
     };
 
+    const handleLeaveSubmit = async (e) => {
+        e.preventDefault();
+        if (!userData) return;
+
+        try {
+            const startDate = new Date(leaveFormData.startDate);
+            const endDate = new Date(leaveFormData.endDate);
+            const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+
+            // Determine initial status based on role
+            const initialStatus = role === 'team_leader' ? 'pending_manager' : 'pending_leader';
+
+            await addLeaveRequest({
+                ...leaveFormData,
+                employeeId: user?.uid,
+                employeeName: `${userData.firstName || ''} ${userData.lastName || ''}`,
+                companyId: userData.companyId,
+                departmentId: userData.departmentId,
+                department: userData.department || '',
+                totalDays,
+                status: initialStatus,
+            });
+            resetForm();
+        } catch (error) {
+            console.error("Error submitting leave request:", error);
+        }
+    };
+
+    const handleLeaveAction = async (req, action) => {
+        if (action === 'reject') {
+            setRejectReq(req);
+            setIsRejectModalOpen(true);
+            return;
+        }
+
+        try {
+            await updateLeaveRequest(req.id, {
+                status: action === 'approve' ? 'approved' : 'rejected',
+                reviewedBy: `${userData?.firstName || ''} ${userData?.lastName || ''}`,
+            });
+        } catch (error) {
+            console.error("Error updating leave request:", error);
+        }
+    };
+
     return (
         <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0.5rem 0.25rem' }}>
             {/* Optimized Header Section */}
@@ -380,14 +454,14 @@ const Requisitions = () => {
                         WebkitBackgroundClip: 'text',
                         WebkitTextFillColor: 'transparent'
                     }}>
-                        Requisitions
+                        Requisitions & Leave Requests
                     </h2>
                     <p style={{ color: '#64748b', marginTop: '0.5rem', fontSize: '1.05rem', fontWeight: 500 }}>
                         Streamline your workflow & requests
                     </p>
                 </div>
 
-                {role !== 'team_leader' && (
+                {role !== 'manager' && (
                     <button
                         className="btn-primary"
                         onClick={() => setIsFormOpen(true)}
@@ -419,6 +493,61 @@ const Requisitions = () => {
                     </button>
                 )}
             </header>
+
+            {/* Tab Navigation */}
+            <div style={{
+                display: 'flex',
+                gap: '0.5rem',
+                marginBottom: '1.5rem',
+                borderBottom: '2px solid #f1f5f9',
+                padding: '0 0.25rem',
+                overflow: 'auto'
+            }}>
+                <button
+                    onClick={() => setActiveTab('leave')}
+                    style={{
+                        padding: '0.75rem 1.5rem',
+                        background: 'none',
+                        border: 'none',
+                        borderBottom: activeTab === 'leave' ? '2px solid #2563eb' : '2px solid transparent',
+                        color: activeTab === 'leave' ? '#2563eb' : '#64748b',
+                        fontWeight: activeTab === 'leave' ? 700 : 500,
+                        fontSize: '0.95rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        marginBottom: '-2px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        whiteSpace: 'nowrap'
+                    }}
+                >
+                    <Calendar size={18} />
+                    Leave Requests
+                </button>
+                <button
+                    onClick={() => setActiveTab('requisitions')}
+                    style={{
+                        padding: '0.75rem 1.5rem',
+                        background: 'none',
+                        border: 'none',
+                        borderBottom: activeTab === 'requisitions' ? '2px solid #2563eb' : '2px solid transparent',
+                        color: activeTab === 'requisitions' ? '#2563eb' : '#64748b',
+                        fontWeight: activeTab === 'requisitions' ? 700 : 500,
+                        fontSize: '0.95rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        marginBottom: '-2px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        whiteSpace: 'nowrap'
+                    }}
+                >
+                    <FileText size={18} />
+                    Requisitions
+                </button>
+            </div>
 
             {/* Responsive Controls */}
             <div style={{
@@ -488,40 +617,178 @@ const Requisitions = () => {
                 </div>
             </div>
 
-            {/* Content Grid */}
-            {visibleRequisitions.length === 0 ? (
-                <div style={{
-                    padding: '6rem 2rem', textAlign: 'center', background: 'white', borderRadius: '24px',
-                    border: '1px solid #f1f5f9', boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
-                }}>
+            {/* Content Grid - Conditional Based on Active Tab */}
+            {activeTab === 'leave' ? (
+                // Leave Requests View
+                visibleLeaveRequests.length === 0 ? (
                     <div style={{
-                        width: '64px', height: '64px', borderRadius: '20px', backgroundColor: '#f8fafc',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem',
-                        color: '#94a3b8'
+                        padding: '6rem 2rem', textAlign: 'center', background: 'white', borderRadius: '24px',
+                        border: '1px solid #f1f5f9', boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
                     }}>
-                        <FileText size={32} />
-                    </div>
-                    <h3 style={{ margin: '0 0 0.5rem 0', color: '#1e293b' }}>No requisitions found</h3>
-                    <p style={{ margin: 0, color: '#64748b' }}>Try adjusting your search or filters.</p>
-                </div>
-            ) : (
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
-                    gap: '1.5rem'
-                }}>
-                    {visibleRequisitions.map((req, idx) => (
-                        <div key={req.id} style={{ animationDelay: `${idx * 0.05}s` }} className="fade-in">
-                            <RequisitionCard
-                                req={req}
-                                role={role}
-                                user={user}
-                                onEdit={handleEdit}
-                                onAction={handleAction}
-                            />
+                        <div style={{
+                            width: '64px', height: '64px', borderRadius: '20px', backgroundColor: '#f8fafc',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem',
+                            color: '#94a3b8'
+                        }}>
+                            <Calendar size={32} />
                         </div>
-                    ))}
-                </div>
+                        <h3 style={{ margin: '0 0 0.5rem 0', color: '#1e293b' }}>No leave requests found</h3>
+                        <p style={{ margin: 0, color: '#64748b' }}>Try adjusting your search or filters.</p>
+                    </div>
+                ) : (
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+                        gap: '1.5rem'
+                    }}>
+                        {visibleLeaveRequests.map((req, idx) => (
+                            <div key={req.id} style={{ animationDelay: `${idx * 0.05}s` }} className="fade-in">
+                                <div style={{
+                                    background: 'white',
+                                    borderRadius: '20px',
+                                    padding: '1.5rem',
+                                    border: '1px solid #f1f5f9',
+                                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03)',
+                                    transition: 'all 0.3s',
+                                    cursor: 'pointer'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                            <div style={{
+                                                width: '40px', height: '40px', borderRadius: '12px',
+                                                background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white'
+                                            }}>
+                                                <Calendar size={20} />
+                                            </div>
+                                            <div>
+                                                <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#0f172a' }}>
+                                                    {req.leaveType?.charAt(0).toUpperCase() + req.leaveType?.slice(1)} Leave
+                                                </h4>
+                                                <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                                                    {req.employeeName}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <StatusBadge status={req.status} />
+                                    </div>
+
+                                    <div style={{ marginBottom: '1rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                            <Clock size={14} color="#64748b" />
+                                            <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                                                {new Date(req.startDate).toLocaleDateString()} - {new Date(req.endDate).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            Total Days:
+                                            <span style={{
+                                                marginLeft: '0.5rem',
+                                                padding: '0.25rem 0.5rem',
+                                                background: '#ee0c0cff',
+                                                borderRadius: '6px',
+                                                fontSize: '0.75rem',
+                                                fontWeight: 600,
+                                                color: 'white'
+                                            }}>
+                                                {req.totalDays} day{req.totalDays !== 1 ? 's' : ''}
+                                            </span>
+                                        </div>
+                                        {req.reason && (
+                                            <p style={{ margin: '0.75rem 0 0', fontSize: '0.9rem', color: '#475569', lineHeight: 1.5 }}>
+                                                {req.reason}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Action Buttons for Managers/Leaders */}
+                                    {(role === 'manager' || role === 'team_leader') && req.status === 'pending' && (
+                                        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9' }}>
+                                            <button
+                                                onClick={() => handleLeaveAction(req, 'approve')}
+                                                style={{
+                                                    flex: 1,
+                                                    padding: '0.6rem',
+                                                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '10px',
+                                                    fontWeight: 600,
+                                                    fontSize: '0.85rem',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: '0.5rem'
+                                                }}
+                                            >
+                                                <CheckCircle size={16} />
+                                                Approve
+                                            </button>
+                                            <button
+                                                onClick={() => handleLeaveAction(req, 'reject')}
+                                                style={{
+                                                    flex: 1,
+                                                    padding: '0.6rem',
+                                                    background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '10px',
+                                                    fontWeight: 600,
+                                                    fontSize: '0.85rem',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: '0.5rem'
+                                                }}
+                                            >
+                                                <XCircle size={16} />
+                                                Reject
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )
+            ) : (
+                // Requisitions View (existing)
+                visibleRequisitions.length === 0 ? (
+                    <div style={{
+                        padding: '6rem 2rem', textAlign: 'center', background: 'white', borderRadius: '24px',
+                        border: '1px solid #f1f5f9', boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
+                    }}>
+                        <div style={{
+                            width: '64px', height: '64px', borderRadius: '20px', backgroundColor: '#f8fafc',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem',
+                            color: '#94a3b8'
+                        }}>
+                            <FileText size={32} />
+                        </div>
+                        <h3 style={{ margin: '0 0 0.5rem 0', color: '#1e293b' }}>No requisitions found</h3>
+                        <p style={{ margin: 0, color: '#64748b' }}>Try adjusting your search or filters.</p>
+                    </div>
+                ) : (
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+                        gap: '1.5rem'
+                    }}>
+                        {visibleRequisitions.map((req, idx) => (
+                            <div key={req.id} style={{ animationDelay: `${idx * 0.05}s` }} className="fade-in">
+                                <RequisitionCard
+                                    req={req}
+                                    role={role}
+                                    user={user}
+                                    onEdit={handleEdit}
+                                    onAction={handleAction}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                )
             )}
 
             {/* Create Modal */}
@@ -540,10 +807,10 @@ const Requisitions = () => {
                         }}>
                             <div>
                                 <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#1e293b' }}>
-                                    {editingId ? 'Edit Requisition' : 'New Requisition'}
+                                    {activeTab === 'leave' ? 'New Leave Request' : (editingId ? 'Edit Requisition' : 'New Requisition')}
                                 </h3>
                                 <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
-                                    Fill in the details below
+                                    {activeTab === 'leave' ? 'Request time off from work' : 'Fill in the details below'}
                                 </p>
                             </div>
                             <button onClick={resetForm} style={{
@@ -554,89 +821,153 @@ const Requisitions = () => {
                                 <X size={20} />
                             </button>
                         </div>
-                        <form onSubmit={handleSubmit} style={{ padding: '2rem' }}>
-                            <div style={{ marginBottom: '1.5rem' }}>
-                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>Request Title</label>
-                                <input
-                                    required
-                                    className="styled-input"
-                                    value={formData.title}
-                                    onChange={e => setFormData({ ...formData, title: e.target.value })}
-                                    placeholder="e.g. MacBook Pro M3 Upgrade"
-                                    style={{ width: '100%', padding: '0.875rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem' }}
-                                />
-                            </div>
+                        <form onSubmit={activeTab === 'leave' ? handleLeaveSubmit : handleSubmit} style={{
+                            padding: '2rem',
+                            maxHeight: 'calc(90vh - 100px)',
+                            overflowY: 'auto'
+                        }}>
+                            {activeTab === 'leave' ? (
+                                /* Leave Request Form */
+                                <>
+                                    <div style={{ marginBottom: '1.5rem' }}>
+                                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>Leave Type</label>
+                                        <select
+                                            required
+                                            value={leaveFormData.leaveType}
+                                            onChange={e => setLeaveFormData({ ...leaveFormData, leaveType: e.target.value })}
+                                            style={{ width: '100%', padding: '0.875rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem', appearance: 'none', background: 'white' }}
+                                        >
+                                            <option value="vacation">Vacation Leave</option>
+                                            <option value="sick">Sick Leave</option>
+                                            <option value="personal">Personal Leave</option>
+                                            <option value="maternity">Maternity Leave</option>
+                                            <option value="paternity">Paternity Leave</option>
+                                        </select>
+                                    </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>Request Type</label>
-                                    <select
-                                        value={formData.type}
-                                        onChange={e => setFormData({ ...formData, type: e.target.value })}
-                                        style={{ width: '100%', padding: '0.875rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem', appearance: 'none', background: 'white' }}
-                                    >
-                                        <option>Purchase Requisition</option>
-                                        <option>Leave Request</option>
-                                        <option>Expense Claim</option>
-                                        <option>Advance Salary</option>
-                                        <option>Travel Request</option>
-                                        <option>Petty Cash</option>
-                                        <option>Office Supplies</option>
-                                        <option>Maintenance</option>
-                                        <option>IT Support</option>
-                                        <option>Training Request</option>
-                                        <option>Other</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>Estimated Amount</label>
-                                    <div style={{ position: 'relative' }}>
-                                        <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: '#94a3b8' }}>MK</div>
-                                        <input
-                                            type="number"
-                                            value={formData.amount}
-                                            onChange={e => setFormData({ ...formData, amount: e.target.value })}
-                                            placeholder="0.00"
-                                            style={{ width: '100%', padding: '0.875rem 0.875rem 0.875rem 3rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem' }}
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>Start Date</label>
+                                            <input
+                                                type="date"
+                                                required
+                                                value={leaveFormData.startDate}
+                                                onChange={e => setLeaveFormData({ ...leaveFormData, startDate: e.target.value })}
+                                                style={{ width: '100%', padding: '0.875rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem' }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>End Date</label>
+                                            <input
+                                                type="date"
+                                                required
+                                                value={leaveFormData.endDate}
+                                                onChange={e => setLeaveFormData({ ...leaveFormData, endDate: e.target.value })}
+                                                style={{ width: '100%', padding: '0.875rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem' }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div style={{ marginBottom: '2rem' }}>
+                                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>Reason</label>
+                                        <textarea
+                                            required
+                                            value={leaveFormData.reason}
+                                            onChange={e => setLeaveFormData({ ...leaveFormData, reason: e.target.value })}
+                                            placeholder="Provide a reason for your leave request..."
+                                            rows={4}
+                                            style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem', resize: 'none', lineHeight: '1.6' }}
                                         />
                                     </div>
-                                </div>
-                            </div>
+                                </>
+                            ) : (
+                                /* Requisition Form */
+                                <>
+                                    <div style={{ marginBottom: '1.5rem' }}>
+                                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>Request Title</label>
+                                        <input
+                                            required
+                                            className="styled-input"
+                                            value={formData.title}
+                                            onChange={e => setFormData({ ...formData, title: e.target.value })}
+                                            placeholder="e.g. MacBook Pro M3 Upgrade"
+                                            style={{ width: '100%', padding: '0.875rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem' }}
+                                        />
+                                    </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>Start Date</label>
-                                    <input
-                                        type="date"
-                                        value={formData.startDate}
-                                        onChange={e => setFormData({ ...formData, startDate: e.target.value })}
-                                        style={{ width: '100%', padding: '0.875rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem' }}
-                                    />
-                                </div>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>End Date</label>
-                                    <input
-                                        type="date"
-                                        value={formData.endDate}
-                                        onChange={e => setFormData({ ...formData, endDate: e.target.value })}
-                                        style={{ width: '100%', padding: '0.875rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem' }}
-                                    />
-                                </div>
-                            </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>Request Type</label>
+                                            <select
+                                                value={formData.type}
+                                                onChange={e => setFormData({ ...formData, type: e.target.value })}
+                                                style={{ width: '100%', padding: '0.875rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem', appearance: 'none', background: 'white' }}
+                                            >
+                                                <option>Purchase Requisition</option>
+                                                <option>Leave Request</option>
+                                                <option>Expense Claim</option>
+                                                <option>Advance Salary</option>
+                                                <option>Travel Request</option>
+                                                <option>Petty Cash</option>
+                                                <option>Office Supplies</option>
+                                                <option>Maintenance</option>
+                                                <option>IT Support</option>
+                                                <option>Training Request</option>
+                                                <option>Other</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>Estimated Amount</label>
+                                            <div style={{ position: 'relative' }}>
+                                                <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: '#94a3b8' }}>MK</div>
+                                                <input
+                                                    type="number"
+                                                    value={formData.amount}
+                                                    onChange={e => setFormData({ ...formData, amount: e.target.value })}
+                                                    placeholder="0.00"
+                                                    style={{ width: '100%', padding: '0.875rem 0.875rem 0.875rem 3rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem' }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
 
-                            <div style={{ marginBottom: '2rem' }}>
-                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>Justification / Details</label>
-                                <textarea
-                                    required
-                                    className="styled-input"
-                                    value={formData.description}
-                                    onChange={e => setFormData({ ...formData, description: e.target.value })}
-                                    placeholder="Provide a detailed explanation for this request..."
-                                    rows={4}
-                                    style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem', resize: 'none', lineHeight: '1.6' }}
-                                />
-                            </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>Start Date</label>
+                                            <input
+                                                type="date"
+                                                value={formData.startDate}
+                                                onChange={e => setFormData({ ...formData, startDate: e.target.value })}
+                                                style={{ width: '100%', padding: '0.875rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem' }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>End Date</label>
+                                            <input
+                                                type="date"
+                                                value={formData.endDate}
+                                                onChange={e => setFormData({ ...formData, endDate: e.target.value })}
+                                                style={{ width: '100%', padding: '0.875rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem' }}
+                                            />
+                                        </div>
+                                    </div>
 
+                                    <div style={{ marginBottom: '2rem' }}>
+                                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>Justification / Details</label>
+                                        <textarea
+                                            required
+                                            className="styled-input"
+                                            value={formData.description}
+                                            onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                            placeholder="Provide a detailed explanation for this request..."
+                                            rows={4}
+                                            style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem', resize: 'none', lineHeight: '1.6' }}
+                                        />
+                                    </div>
+                                </>
+                            )}
+
+                            {/* Submit Buttons - Common for both forms */}
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
                                 <button type="button" onClick={resetForm} style={{
                                     padding: '0.875rem 1.75rem', borderRadius: '14px', border: '1px solid #e2e8f0',
@@ -644,8 +975,17 @@ const Requisitions = () => {
                                 }}>
                                     Cancel
                                 </button>
-                                <button type="submit" className="btn-primary" style={{ padding: '0.875rem 2rem', borderRadius: '14px' }}>
-                                    {editingId ? 'Update Request' : 'Submit Requisition'}
+                                <button type="submit" className="btn-primary" style={{
+                                    padding: '0.875rem 2rem',
+                                    borderRadius: '14px',
+                                    border: 'none',
+                                    background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+                                    color: 'white',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
+                                }}>
+                                    {activeTab === 'leave' ? 'Submit Leave Request' : (editingId ? 'Update Request' : 'Submit Requisition')}
                                 </button>
                             </div>
                         </form>

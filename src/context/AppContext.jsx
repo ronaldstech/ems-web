@@ -16,6 +16,7 @@ export const AppProvider = ({ children }) => {
     const [requisitions, setRequisitions] = useState([]);
     const [invoices, setInvoices] = useState([]);
     const [attendance, setAttendance] = useState([]);
+    const [leaveRequests, setLeaveRequests] = useState([]);
 
     useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
@@ -114,6 +115,12 @@ export const AppProvider = ({ children }) => {
             console.error("Error fetching attendance:", error);
         });
 
+        const unsubscribeLeaveRequests = onSnapshot(collection(db, 'leaveRequests'), (snapshot) => {
+            setLeaveRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        }, (error) => {
+            console.error("Error fetching leave requests:", error);
+        });
+
         return () => {
             unsubscribeAuth();
             unsubscribeCompanies();
@@ -122,6 +129,7 @@ export const AppProvider = ({ children }) => {
             unsubscribeRequisitions();
             unsubscribeInvoices();
             unsubscribeAttendance();
+            unsubscribeLeaveRequests();
         };
     }, []);
 
@@ -219,6 +227,41 @@ export const AppProvider = ({ children }) => {
             await deleteDoc(doc(db, 'departments', id));
         } catch (error) {
             console.error("Error deleting department:", error);
+            throw error;
+        }
+    };
+
+    // Leave Request Operations
+    const addLeaveRequest = async (leaveRequest) => {
+        try {
+            await addDoc(collection(db, 'leaveRequests'), {
+                ...leaveRequest,
+                requestedAt: new Date().toISOString()
+            });
+        } catch (error) {
+            console.error("Error adding leave request:", error);
+            throw error;
+        }
+    };
+
+    const updateLeaveRequest = async (id, updatedData) => {
+        try {
+            const leaveRequestRef = doc(db, 'leaveRequests', id);
+            await updateDoc(leaveRequestRef, {
+                ...updatedData,
+                reviewedAt: new Date().toISOString()
+            });
+        } catch (error) {
+            console.error("Error updating leave request:", error);
+            throw error;
+        }
+    };
+
+    const deleteLeaveRequest = async (id) => {
+        try {
+            await deleteDoc(doc(db, 'leaveRequests', id));
+        } catch (error) {
+            console.error("Error deleting leave request:", error);
             throw error;
         }
     };
@@ -485,6 +528,10 @@ export const AppProvider = ({ children }) => {
             addRequisition,
             updateRequisition,
             deleteRequisition,
+            leaveRequests,
+            addLeaveRequest,
+            updateLeaveRequest,
+            deleteLeaveRequest,
             invoices,
             addInvoice,
             updateInvoice,
