@@ -423,6 +423,7 @@ const Employees = () => {
                                     >
                                         <option value="employee">Employee</option>
                                         <option value="supervisor">Supervisor</option>
+                                        <option value="finance_manager">Finance Manager</option>
                                         {userRole === 'admin' && (
                                             <>
                                                 <option value="manager">Manager</option>
@@ -465,7 +466,6 @@ const Employees = () => {
                                     value={formData.department}
                                     onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                                     style={inputStyle}
-                                    required
                                 >
                                     <option value="">Select Department...</option>
                                     {(userRole === 'admin' && formData.companyId)

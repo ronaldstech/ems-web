@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { auth, db, storage } from '../firebase';
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { auth, db, storage, firebaseConfig } from '../firebase';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, getAuth } from 'firebase/auth';
+import { initializeApp, deleteApp } from 'firebase/app';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, orderBy, where, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
@@ -170,14 +171,37 @@ export const AppProvider = ({ children }) => {
     };
 
     const addEmployee = async (employee) => {
+        let secondaryApp;
         try {
+            // 1. Create Auth User (using secondary app to avoid signing out current user)
+            const appName = `SecondaryApp-${Date.now()}`;
+            secondaryApp = initializeApp(firebaseConfig, appName);
+            const secondaryAuth = getAuth(secondaryApp);
+
+            // Default password: 1-6 (123456)
+            const userCredential = await createUserWithEmailAndPassword(secondaryAuth, employee.email, '123456');
+            const newUid = userCredential.user.uid;
+
+            // Sign out the secondary auth instance immediately
+            await signOut(secondaryAuth);
+
+            // 2. Add to Firestore with authUid
             await addDoc(collection(db, 'employees'), {
                 ...employee,
+                authUid: newUid,
                 createdAt: new Date().toISOString()
             });
         } catch (error) {
             console.error("Error adding employee:", error);
             throw error;
+        } finally {
+            if (secondaryApp) {
+                try {
+                    await deleteApp(secondaryApp);
+                } catch (e) {
+                    console.error("Error deleting secondary app:", e);
+                }
+            }
         }
     };
 

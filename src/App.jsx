@@ -119,7 +119,7 @@ function App() {
             </ProtectedRoute>
           } />
           <Route path="/invoices" element={
-            <ProtectedRoute allowedRoles={['admin', 'manager', 'supervisor', 'employee']}>
+            <ProtectedRoute allowedRoles={['admin', 'manager', 'supervisor', 'employee', 'finance_manager']}>
               <Invoices />
             </ProtectedRoute>
           } />
@@ -129,12 +129,12 @@ function App() {
             </ProtectedRoute>
           } />
           <Route path="/profile" element={
-            <ProtectedRoute allowedRoles={['manager', 'supervisor', 'employee']}>
+            <ProtectedRoute allowedRoles={['manager', 'supervisor', 'employee', 'finance_manager']}>
               <Profile />
             </ProtectedRoute>
           } />
           <Route path="/settings" element={
-            <ProtectedRoute allowedRoles={['manager', 'supervisor']}>
+            <ProtectedRoute allowedRoles={['manager', 'supervisor', 'finance_manager']}>
               <Settings />
             </ProtectedRoute>
           } />

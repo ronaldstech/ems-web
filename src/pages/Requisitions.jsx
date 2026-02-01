@@ -7,33 +7,15 @@ import jsPDF from 'jspdf';
 
 const StatusBadge = ({ status }) => {
     const styles = {
-        pending_supervisor: {
-            bg: 'hsl(214, 100%, 97%)',
-            color: 'hsl(214, 95%, 45%)',
-            border: 'hsl(214, 90%, 90%)',
-            label: 'Pending Supervisor'
-        },
-        pending_manager: {
-            bg: 'hsl(35, 100%, 97%)',
-            color: 'hsl(35, 90%, 45%)',
-            border: 'hsl(35, 90%, 90%)',
-            label: 'Pending Manager'
-        },
-        approved: {
-            bg: 'hsl(142, 70%, 97%)',
-            color: 'hsl(142, 72%, 29%)',
-            border: 'hsl(142, 70%, 90%)',
-            label: 'Approved'
-        },
-        declined: {
-            bg: 'hsl(0, 100%, 97%)',
-            color: 'hsl(0, 84%, 45%)',
-            border: 'hsl(0, 100%, 90%)',
-            label: 'Declined'
-        }
+        pending_supervisor: { bg: '#e0f2fe', color: '#0369a1', icon: Clock, label: 'Pending Supervisor' },
+        pending_finance: { bg: '#fff7ed', color: '#c2410c', icon: Clock, label: 'Pending Finance' },
+        pending_manager: { bg: '#fef3c7', color: '#b45309', icon: Clock, label: 'Pending Manager' },
+        approved: { bg: '#dcfce7', color: '#166534', icon: CheckCircle, label: 'Approved' },
+        declined: { bg: '#fee2e2', color: '#b91c1c', icon: XCircle, label: 'Declined' }
     };
 
-    const s = styles[status?.toLowerCase()] || { bg: '#f1f5f9', color: '#64748b', border: '#e2e8f0', label: status };
+    const s = styles[status?.toLowerCase()] || { bg: '#f1f5f9', color: '#64748b', icon: Circle, label: status };
+    const Icon = s.icon;
 
     return (
         <span style={{
@@ -47,10 +29,10 @@ const StatusBadge = ({ status }) => {
             textTransform: 'uppercase',
             backgroundColor: s.bg,
             color: s.color,
-            border: `1px solid ${s.border} `,
+            border: `1px solid ${s.bg.replace('97%', '90%').replace('e0f2fe', '#a7f3d0').replace('fff7ed', '#fed7aa').replace('fef3c7', '#fde68a').replace('dcfce7', '#a7f3d0').replace('fee2e2', '#fecaca')} `, // Dynamic border color
             letterSpacing: '0.025em'
         }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: s.color }}></div>
+            <Icon size={12} strokeWidth={2.5} />
             {s.label}
         </span>
     );
@@ -126,7 +108,8 @@ const RequisitionCard = ({ req, role, user, onEdit, onAction, onView }) => {
             {/* Signature Status Indicators */}
             <div style={{ marginTop: '0.25rem', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {(() => {
-                    const isSupSigned = req.status === 'pending_manager' || req.status === 'approved';
+                    const isSupSigned = req.status === 'pending_finance' || req.status === 'pending_manager' || req.status === 'approved';
+                    const isFinSigned = req.status === 'pending_manager' || req.status === 'approved';
                     const isMgrSigned = req.status === 'approved';
 
                     return (
@@ -140,6 +123,16 @@ const RequisitionCard = ({ req, role, user, onEdit, onAction, onView }) => {
                                 border: '1px solid', borderColor: isSupSigned ? '#a7f3d0' : '#e2e8f0'
                             }}>
                                 {isSupSigned ? <CheckCircle size={10} /> : <Circle size={10} />} Supervisor
+                            </div>
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: '4px',
+                                fontSize: '0.7rem', fontWeight: 600,
+                                color: isFinSigned ? '#059669' : '#94a3b8',
+                                padding: '2px 8px', borderRadius: '4px',
+                                background: isFinSigned ? '#ecfdf5' : '#f1f5f9',
+                                border: '1px solid', borderColor: isFinSigned ? '#a7f3d0' : '#e2e8f0'
+                            }}>
+                                {isFinSigned ? <CheckCircle size={10} /> : <Circle size={10} />} Finance
                             </div>
                             <div style={{
                                 display: 'flex', alignItems: 'center', gap: '4px',
@@ -255,6 +248,54 @@ const RequisitionCard = ({ req, role, user, onEdit, onAction, onView }) => {
                                 gap: '0.5rem'
                             }}
                             title="Decline"
+                        >
+                            <XCircle size={16} />
+                            Decline
+                        </button>
+                    </>
+                )}
+
+                {/* Finance Manager Actions */}
+                {role === 'finance_manager' && req.status === 'pending_finance' && (
+                    <>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onAction(req, 'approve'); }}
+                            style={{
+                                flex: 1,
+                                padding: '0.6rem',
+                                background: 'linear-gradient(135deg, #10b981, #059669)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '10px',
+                                fontWeight: 600,
+                                fontSize: '0.85rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.5rem'
+                            }}
+                        >
+                            <CheckCircle size={16} />
+                            Approve
+                        </button>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onAction(req, 'reject'); }}
+                            style={{
+                                flex: 1,
+                                padding: '0.6rem',
+                                background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '10px',
+                                fontWeight: 600,
+                                fontSize: '0.85rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.5rem'
+                            }}
                         >
                             <XCircle size={16} />
                             Decline
@@ -407,7 +448,7 @@ const Requisitions = () => {
         if (!selectedItem) return;
         const onKey = (e) => { if (e.key === 'Escape') closeDetail(); };
         window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
+        return () => window.removeEventListener(onKey);
     }, [selectedItem]);
 
     // Fetch employee details (email and phone) when modal opens
@@ -448,6 +489,7 @@ const Requisitions = () => {
     const visibleRequisitions = requisitions.filter(req => {
         if (role === 'admin') return true;
         if (role === 'manager') return req.companyId === userData?.companyId;
+        if (role === 'finance_manager') return req.companyId === userData?.companyId;
         if (role === 'supervisor') return req.companyId === userData?.companyId && req.departmentId === userData?.departmentId;
         if (role === 'employee') return req.employeeId === user?.uid;
         return false;
@@ -465,6 +507,7 @@ const Requisitions = () => {
     const visibleLeaveRequests = leaveRequests.filter(req => {
         if (role === 'admin') return true;
         if (role === 'manager') return req.companyId === userData?.companyId;
+        if (role === 'finance_manager') return req.companyId === userData?.companyId;
         if (role === 'supervisor') return req.companyId === userData?.companyId && req.departmentId === userData?.departmentId;
         if (role === 'employee') return req.employeeId === user?.uid;
         return false;
@@ -480,22 +523,34 @@ const Requisitions = () => {
 
     // Calculate badge counts for tabs (only pending items)
     const getPendingLeaveCount = () => {
-        const pendingStatus = role === 'manager' ? 'pending_manager' : 'pending_supervisor';
+        let pendingStatus;
+        if (role === 'supervisor') pendingStatus = 'pending_supervisor';
+        else if (role === 'finance_manager') pendingStatus = 'pending_finance'; // Not applicable for leave, but keeping structure
+        else if (role === 'manager') pendingStatus = 'pending_manager';
+        else pendingStatus = 'pending_supervisor'; // Default for employee
+
         return leaveRequests.filter(req => {
             if (role === 'admin') return req.status === pendingStatus;
-            if (role === 'manager') return req.companyId === userData?.companyId && req.status === pendingStatus;
-            if (role === 'supervisor') return req.companyId === userData?.companyId && req.departmentId === userData?.departmentId && req.status === pendingStatus;
+            if (role === 'manager') return req.companyId === userData?.companyId && req.status === 'pending_manager';
+            if (role === 'finance_manager') return false; // Finance manager does not approve leave
+            if (role === 'supervisor') return req.companyId === userData?.companyId && req.departmentId === userData?.departmentId && req.status === 'pending_supervisor';
             if (role === 'employee') return req.employeeId === user?.uid && req.status === pendingStatus;
             return false;
         }).length;
     };
 
     const getPendingRequisitionCount = () => {
-        const pendingStatus = role === 'manager' ? 'pending_manager' : 'pending_supervisor';
+        let pendingStatus;
+        if (role === 'supervisor') pendingStatus = 'pending_supervisor';
+        else if (role === 'finance_manager') pendingStatus = 'pending_finance';
+        else if (role === 'manager') pendingStatus = 'pending_manager';
+        else pendingStatus = 'pending_supervisor'; // Default for employee
+
         return requisitions.filter(req => {
             if (role === 'admin') return req.status === pendingStatus;
-            if (role === 'manager') return req.companyId === userData?.companyId && req.status === pendingStatus;
-            if (role === 'supervisor') return req.companyId === userData?.companyId && req.departmentId === userData?.departmentId && req.status === pendingStatus;
+            if (role === 'manager') return req.companyId === userData?.companyId && req.status === 'pending_manager';
+            if (role === 'finance_manager') return req.companyId === userData?.companyId && req.status === 'pending_finance';
+            if (role === 'supervisor') return req.companyId === userData?.companyId && req.departmentId === userData?.departmentId && req.status === 'pending_supervisor';
             if (role === 'employee') return req.employeeId === user?.uid && req.status === pendingStatus;
             return false;
         }).length;
@@ -562,7 +617,7 @@ const Requisitions = () => {
         }
 
         // Require PIN for both approve and reject for supervisors and managers
-        if ((action === 'approve' || action === 'reject') && (role === 'supervisor' || role === 'manager')) {
+        if ((action === 'approve' || action === 'reject') && (role === 'supervisor' || role === 'finance_manager' || role === 'manager')) {
             if (!userData?.approvalPin) {
                 toast.error('You must set an approval PIN in Settings before approving or declining requests.');
                 return;
@@ -590,7 +645,8 @@ const Requisitions = () => {
 
         let nextStatus = req.status;
         if (action === 'approve') {
-            if (req.status === 'pending_supervisor') nextStatus = 'pending_manager';
+            if (req.status === 'pending_supervisor') nextStatus = 'pending_finance';
+            else if (req.status === 'pending_finance') nextStatus = 'pending_manager';
             else if (req.status === 'pending_manager') nextStatus = 'approved';
         }
 
@@ -688,16 +744,33 @@ const Requisitions = () => {
         try {
             if (pinReqType === 'requisition') {
                 let nextStatus = pinReq.status;
-                if (pinReq.status === 'pending_supervisor') nextStatus = 'pending_manager';
-                else if (pinReq.status === 'pending_manager') nextStatus = 'approved';
+                let updateData = { status: nextStatus, updatedAt: new Date().toISOString() };
+                const reviewerName = `${userData?.firstName || ''} ${userData?.lastName || ''} `;
 
-                await updateRequisition(pinReq.id, {
-                    status: nextStatus,
-                    signature: signatureData,
-                    signedBy: `${userData?.firstName || ''} ${userData?.lastName || ''} `,
-                    signedAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString()
-                });
+                if (pinReq.status === 'pending_supervisor') {
+                    updateData.status = 'pending_finance'; // Was pending_manager
+                    updateData.supervisorSignature = signatureData;
+                    updateData.supervisorApprovedBy = reviewerName;
+                    updateData.supervisorApprovedAt = new Date().toISOString();
+                }
+                else if (pinReq.status === 'pending_finance') {
+                    updateData.status = 'pending_manager';
+                    updateData.financeSignature = signatureData;
+                    updateData.financeApprovedBy = reviewerName;
+                    updateData.financeApprovedAt = new Date().toISOString();
+                }
+                else if (pinReq.status === 'pending_manager') {
+                    updateData.status = 'approved';
+                    updateData.managerSignature = signatureData;
+                    updateData.managerApprovedBy = reviewerName;
+                    updateData.managerApprovedAt = new Date().toISOString();
+                    // Legacy support: also populate single signature fields if needed, or rely on specific role fields
+                    updateData.signature = signatureData;
+                    updateData.signedBy = reviewerName;
+                    updateData.signedAt = new Date().toISOString();
+                }
+
+                await updateRequisition(pinReq.id, updateData);
             } else if (pinReqType === 'leave') {
                 let updateData = {};
                 const currentDate = new Date().toISOString();
@@ -1077,35 +1150,67 @@ const Requisitions = () => {
                 }
 
             } else {
-                // --- Single Signature for Requisitions ---
-                const boxWidth = 90;
+                // --- Triple Signature for Requisitions (Supervisor -> Finance -> Manager) ---
+                const boxWidth = 55; // Smaller boxes to fit 3
                 const boxHeight = 40;
+                const spacing = 10;
 
+                // Supervisor
+                const supX = margin;
                 doc.setDrawColor(230, 230, 230);
                 doc.setFillColor(255, 255, 255);
-                doc.roundedRect(margin, yPos, boxWidth, boxHeight, 2, 2, 'FD');
-
+                doc.roundedRect(supX, yPos, boxWidth, boxHeight, 2, 2, 'FD');
                 doc.setFontSize(7);
                 doc.setTextColor(...colors.slate);
-                doc.text('AUTHORIZED BY', margin + 5, yPos + 8);
-
-                if (item.signature) {
-                    try {
-                        doc.addImage(item.signature, 'PNG', margin + 5, yPos + 10, 35, 18);
-                    } catch { }
+                doc.text('SUPERVISOR', supX + 5, yPos + 8);
+                if (item.supervisorSignature) {
+                    try { doc.addImage(item.supervisorSignature, 'PNG', supX + 5, yPos + 10, 35, 18); } catch { }
                 }
-
                 doc.setFontSize(9);
                 doc.setTextColor(...colors.navy);
                 doc.setFont('helvetica', 'bold');
-                doc.text(item.signedBy || 'Pending', margin + 5, yPos + 32);
-
+                doc.text(item.supervisorApprovedBy || 'Pending', supX + 5, yPos + 32);
                 doc.setFontSize(7);
                 doc.setFont('helvetica', 'normal');
+                if (item.supervisorApprovedAt) doc.text(new Date(item.supervisorApprovedAt).toLocaleDateString(), supX + 5, yPos + 37);
+
+                // Finance
+                const finX = supX + boxWidth + spacing;
+                doc.setDrawColor(230, 230, 230);
+                doc.setFillColor(255, 255, 255);
+                doc.roundedRect(finX, yPos, boxWidth, boxHeight, 2, 2, 'FD');
+                doc.setFontSize(7);
                 doc.setTextColor(...colors.slate);
-                if (item.signedAt) {
-                    doc.text(new Date(item.signedAt).toLocaleDateString(), margin + 5, yPos + 37);
+                doc.text('FINANCE MNGR', finX + 5, yPos + 8);
+                if (item.financeSignature) {
+                    try { doc.addImage(item.financeSignature, 'PNG', finX + 5, yPos + 10, 35, 18); } catch { }
                 }
+                doc.setFontSize(9);
+                doc.setTextColor(...colors.navy);
+                doc.setFont('helvetica', 'bold');
+                doc.text(item.financeApprovedBy || 'Pending', finX + 5, yPos + 32);
+                doc.setFontSize(7);
+                doc.setFont('helvetica', 'normal');
+                if (item.financeApprovedAt) doc.text(new Date(item.financeApprovedAt).toLocaleDateString(), finX + 5, yPos + 37);
+
+                // Manager
+                const mgrX = finX + boxWidth + spacing;
+                doc.setDrawColor(230, 230, 230);
+                doc.setFillColor(255, 255, 255);
+                doc.roundedRect(mgrX, yPos, boxWidth, boxHeight, 2, 2, 'FD');
+                doc.setFontSize(7);
+                doc.setTextColor(...colors.slate);
+                doc.text('COMPANY MNGR', mgrX + 5, yPos + 8);
+                if (item.managerSignature || item.signature) {
+                    try { doc.addImage(item.managerSignature || item.signature, 'PNG', mgrX + 5, yPos + 10, 35, 18); } catch { }
+                }
+                doc.setFontSize(9);
+                doc.setTextColor(...colors.navy);
+                doc.setFont('helvetica', 'bold');
+                doc.text(item.managerApprovedBy || item.signedBy || 'Pending', mgrX + 5, yPos + 32);
+                doc.setFontSize(7);
+                doc.setFont('helvetica', 'normal');
+                if (item.managerApprovedAt || item.signedAt) doc.text(new Date(item.managerApprovedAt || item.signedAt).toLocaleDateString(), mgrX + 5, yPos + 37);
             }
 
             // --- 6. FOOTER GRAPHICS ---
@@ -1160,8 +1265,8 @@ const Requisitions = () => {
 
     const handleLeaveAction = async (req, action) => {
         if (action === 'reject') {
-            // Require PIN for reject for supervisors and managers
-            if (role === 'supervisor' || role === 'manager') {
+            // Require PIN for reject for all approvers
+            if (role === 'supervisor' || role === 'finance_manager' || role === 'manager') {
                 if (!userData?.approvalPin) {
                     toast.error('You must set an approval PIN in Settings before declining requests.');
                     return;
@@ -1183,8 +1288,8 @@ const Requisitions = () => {
             return;
         }
 
-        // Require approval PIN for supervisors and managers
-        if (action === 'approve' && (role === 'supervisor' || role === 'manager')) {
+        // Require approval PIN for all approvers
+        if (action === 'approve' && (role === 'supervisor' || role === 'finance_manager' || role === 'manager')) {
             if (!userData?.approvalPin) {
                 toast.error('You must set an approval PIN in Settings before approving requests.');
                 return;
@@ -1396,7 +1501,7 @@ const Requisitions = () => {
                     scrollbarWidth: 'none',
                     flex: '0 1 auto'
                 }}>
-                    {['all', 'pending_supervisor', 'pending_manager', 'approved', 'declined'].map(status => (
+                    {['all', 'pending_supervisor', 'pending_finance', 'pending_manager', 'approved', 'declined'].map(status => (
                         <button
                             key={status}
                             onClick={() => setFilterStatus(status)}
@@ -1559,6 +1664,7 @@ const Requisitions = () => {
                                     {/* Action Buttons - Hierarchical Approval Logic */}
                                     {(
                                         (role === 'supervisor' && req.status === 'pending_supervisor') ||
+                                        (role === 'finance_manager' && req.status === 'pending_finance') ||
                                         (role === 'manager' && req.status === 'pending_manager')
                                     ) && (
                                             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9' }}>

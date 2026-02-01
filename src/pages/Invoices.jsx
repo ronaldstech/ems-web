@@ -27,7 +27,7 @@ const StatusBadge = ({ status }) => {
 };
 
 const Invoices = () => {
-    const { invoices, addInvoice, updateInvoice, deleteInvoice, userData, user } = useApp();
+    const { invoices, addInvoice, updateInvoice, deleteInvoice, userData, user, companies } = useApp();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -46,8 +46,8 @@ const Invoices = () => {
 
     const visibleInvoices = invoices.filter(inv => {
         if (role === 'admin') return true;
-        if (role === 'manager' || role === 'supervisor') {
-            return inv.companyId === userData?.companyId && inv.status !== 'Draft';
+        if (role === 'manager' || role === 'supervisor' || role === 'finance_manager') {
+            return (inv.companyId === userData?.companyId && inv.status !== 'Draft') || inv.employeeId === user?.uid;
         }
         if (role === 'employee') return inv.employeeId === user?.uid;
         return false;
@@ -121,66 +121,243 @@ const Invoices = () => {
     };
 
     const generatePDF = (inv) => {
-        const doc = new jsPDF();
-        const primaryColor = [37, 99, 235]; // #2563eb
+        try {
+            const doc = new jsPDF();
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 20;
 
-        // Header
-        doc.setFontSize(24);
-        doc.setTextColor(...primaryColor);
-        doc.text('INVOICE', 20, 30);
+            // Colors
+            const colors = {
+                orange: [214, 110, 15],
+                navy: [15, 23, 42],
+                slate: [100, 116, 139],
+                bg: [248, 250, 252]
+            };
 
-        doc.setFontSize(10);
-        doc.setTextColor(100);
-        doc.text(`Invoice #: ${inv.invoiceNumber}`, 20, 40);
-        doc.text(`Date: ${inv.invoiceDate}`, 20, 45);
-        doc.text(`Due Date: ${inv.dueDate}`, 20, 50);
+            // Get company details
+            const activeCompany = companies.find(c => c.id === (inv.companyId || userData?.companyId)) || {};
+            const companyName = activeCompany.name || 'ApexSpace';
+            const companyLogo = activeCompany.logoUrl;
+            const companyAddress = activeCompany.address || '123 Business Avenue, Lilongwe';
+            const companyEmail = activeCompany.email || 'support@apexspace.com';
+            const companyPhone = activeCompany.phone || '+265 999 123 456';
 
-        // Company Details
-        doc.setTextColor(0);
-        doc.setFontSize(12);
-        doc.text('FROM:', 20, 65);
-        doc.setFontSize(10);
-        doc.text(inv.employeeName, 20, 72);
-        doc.text(userData.company || 'EMS Space', 20, 77);
+            // --- 1. HEADER GRAPHICS ---
+            doc.setFillColor(...colors.orange);
+            doc.triangle(0, 0, 90, 0, 0, 65, 'F');
+            doc.setFillColor(...colors.navy);
+            doc.triangle(0, 0, 50, 0, 0, 45, 'F');
 
-        // Client Details
-        doc.setFontSize(12);
-        doc.text('BILL TO:', 120, 65);
-        doc.setFontSize(10);
-        doc.text(inv.clientName, 120, 72);
+            // --- 2. COMPANY BRANDING ---
+            let yPos = 30;
 
-        // Table
-        const tableData = inv.items.map(item => [
-            item.description,
-            item.quantity,
-            `MK ${item.unitPrice.toLocaleString()}`,
-            `MK ${(item.quantity * item.unitPrice).toLocaleString()}`
-        ]);
+            // Logo
+            if (companyLogo) {
+                try {
+                    doc.addImage(companyLogo, 'JPEG', margin, yPos - 8, 12, 12);
+                } catch (err) {
+                    doc.setFillColor(...colors.orange);
+                    doc.circle(margin + 5, yPos - 2, 4, 'F');
+                }
+            } else {
+                doc.setFillColor(...colors.orange);
+                doc.circle(margin + 5, yPos - 2, 4, 'F');
+            }
 
-        autoTable(doc, {
-            startY: 90,
-            head: [['Description', 'Qty', 'Unit Price', 'Total']],
-            body: tableData,
-            headStyles: { fillColor: primaryColor, textColor: 255 },
-            foot: [
-                ['', '', 'Subtotal', `MK ${inv.subtotal.toLocaleString()}`],
-                ['', '', `Tax (${inv.taxRate}%)`, `MK ${inv.taxAmount.toLocaleString()}`],
-                ['', '', 'Grand Total', `MK ${inv.total.toLocaleString()}`]
-            ],
-            footStyles: { fillColor: [248, 250, 252], textColor: [15, 23, 42], fontStyle: 'bold' }
-        });
+            // Company Name
+            doc.setFontSize(22);
+            doc.setTextColor(...colors.navy);
+            doc.setFont('helvetica', 'bold');
+            doc.text(companyName, margin + 15, yPos);
 
-        // Notes
-        if (inv.notes) {
-            const finalY = doc.lastAutoTable.finalY + 20;
-            doc.setFontSize(12);
-            doc.text('NOTES:', 20, finalY);
+            // Header Info (Right Aligned)
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...colors.slate);
+            const rightAlign = pageWidth - margin;
+            let headerY = yPos - 5;
+
+            // Parse address
+            const addressLines = companyAddress ? companyAddress.split(/[,;\n]/).map(s => s.trim()).filter(Boolean) : [];
+            const headerInfo = [
+                ...addressLines,
+                companyEmail,
+                companyPhone
+            ].filter(Boolean);
+
+            headerInfo.forEach(text => {
+                doc.text(text, rightAlign, headerY, { align: 'right' });
+                headerY += 5;
+            });
+
+            yPos += 35;
+
+            // --- 3. INVOICE TITLE & DETAILS ---
+            doc.setFillColor(...colors.navy);
+            doc.rect(margin, yPos, 4, 12, 'F'); // Vertical accent bar
+
+            doc.setFontSize(24);
+            doc.setTextColor(...colors.navy);
+            doc.setFont('helvetica', 'bold');
+            doc.text('INVOICE', margin + 8, yPos + 10);
+
+            // Invoice Meta (Right side)
+            const metaY = yPos + 2;
             doc.setFontSize(10);
-            doc.setTextColor(100);
-            doc.text(inv.notes, 20, finalY + 7);
-        }
 
-        doc.save(`${inv.invoiceNumber}.pdf`);
+            doc.setTextColor(...colors.slate);
+            doc.setFont('helvetica', 'bold');
+            doc.text('INVOICE #:', rightAlign - 35, metaY, { align: 'right' });
+            doc.setTextColor(...colors.navy);
+            doc.setFont('helvetica', 'normal');
+            doc.text(inv.invoiceNumber || 'N/A', rightAlign, metaY, { align: 'right' });
+
+            doc.setTextColor(...colors.slate);
+            doc.setFont('helvetica', 'bold');
+            doc.text('DATE:', rightAlign - 35, metaY + 5, { align: 'right' });
+            doc.setTextColor(...colors.navy);
+            doc.setFont('helvetica', 'normal');
+            doc.text(inv.invoiceDate || '-', rightAlign, metaY + 5, { align: 'right' });
+
+            doc.setTextColor(...colors.slate);
+            doc.setFont('helvetica', 'bold');
+            doc.text('DUE DATE:', rightAlign - 35, metaY + 10, { align: 'right' });
+            doc.setTextColor(...colors.navy);
+            doc.setFont('helvetica', 'normal');
+            doc.text(inv.dueDate || '-', rightAlign, metaY + 10, { align: 'right' });
+
+
+            yPos += 25;
+
+            // --- 4. BILL TO SECTION ---
+            doc.setFillColor(...colors.bg);
+            doc.roundedRect(margin, yPos, pageWidth - (margin * 2), 25, 2, 2, 'F');
+
+            doc.setFontSize(10);
+            doc.setTextColor(...colors.slate);
+            doc.setFont('helvetica', 'bold');
+            doc.text('BILL TO:', margin + 5, yPos + 8);
+
+            doc.setTextColor(...colors.navy);
+            doc.setFontSize(12);
+            doc.text(inv.clientName || 'Valued Client', margin + 5, yPos + 18);
+
+            // Originator (Employee)
+            doc.setFontSize(10);
+            doc.setTextColor(...colors.slate);
+            doc.setFont('helvetica', 'bold');
+            doc.text('GENERATED BY:', pageWidth / 2 + 10, yPos + 8);
+
+            doc.setTextColor(...colors.navy);
+            doc.setFont('helvetica', 'normal');
+            doc.text(inv.employeeName || 'Unknown', pageWidth / 2 + 10, yPos + 18);
+
+
+            yPos += 35;
+
+            // --- 5. TABLE ---
+            const tableData = inv.items.map(item => [
+                item.description,
+                item.quantity,
+                `MK ${item.unitPrice.toLocaleString()}`,
+                `MK ${(item.quantity * item.unitPrice).toLocaleString()}`
+            ]);
+
+            autoTable(doc, {
+                startY: yPos,
+                head: [['Description', 'Qty', 'Unit Price', 'Total']],
+                body: tableData,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: colors.navy,
+                    textColor: 255,
+                    fontStyle: 'bold',
+                    cellPadding: 4
+                },
+                styles: {
+                    font: 'helvetica',
+                    fontSize: 10,
+                    textColor: colors.navy,
+                    cellPadding: 4
+                },
+                alternateRowStyles: {
+                    fillColor: colors.bg
+                },
+                columnStyles: {
+                    0: { cellWidth: 'auto' },
+                    1: { cellWidth: 20, halign: 'center' },
+                    2: { cellWidth: 35, halign: 'right' },
+                    3: { cellWidth: 35, halign: 'right' }
+                },
+                foot: [
+                    ['', '', 'Subtotal', `MK ${inv.subtotal.toLocaleString()}`],
+                    ['', '', `Tax (${inv.taxRate}%)`, `MK ${inv.taxAmount.toLocaleString()}`],
+                    ['', '', 'Grand Total', `MK ${inv.total.toLocaleString()}`]
+                ],
+                footStyles: {
+                    fillColor: [255, 255, 255],
+                    textColor: colors.navy,
+                    fontStyle: 'bold',
+                    halign: 'right',
+                    lineWidth: 0 // Remove borders for footer to look cleaner
+                },
+                didParseCell: function (data) {
+                    // Align footer right for label and value
+                    if (data.section === 'foot') {
+                        data.cell.styles.halign = 'right';
+                        if (data.column.index === 2) {
+                            data.cell.styles.textColor = colors.slate;
+                        }
+                        if (data.column.index === 3) {
+                            data.cell.styles.textColor = colors.navy;
+                            data.cell.styles.fontSize = 11;
+                        }
+                    }
+                }
+            });
+
+            // --- 6. NOTES ---
+            if (inv.notes) {
+                let finalY = doc.lastAutoTable.finalY + 15;
+
+                // Add page check
+                if (finalY > pageHeight - 40) {
+                    doc.addPage();
+                    finalY = 20;
+                }
+
+                doc.setFontSize(10);
+                doc.setTextColor(...colors.slate);
+                doc.setFont('helvetica', 'bold');
+                doc.text('NOTES / PAYMENT TERMS:', margin, finalY);
+
+                doc.setTextColor(...colors.navy);
+                doc.setFont('helvetica', 'normal');
+                const notesText = doc.splitTextToSize(inv.notes, pageWidth - (margin * 2));
+                doc.text(notesText, margin, finalY + 6);
+            }
+
+            // --- 7. FOOTER GRAPHICS ---
+            const totalPages = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= totalPages; i++) {
+                doc.setPage(i);
+
+                doc.setFillColor(...colors.orange);
+                doc.triangle(pageWidth, pageHeight, pageWidth - 80, pageHeight, pageWidth, pageHeight - 60, 'F');
+                doc.setFillColor(...colors.navy);
+                doc.triangle(pageWidth, pageHeight, pageWidth - 45, pageHeight, pageWidth, pageHeight - 35, 'F');
+
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(8);
+                doc.text('ApexSpace Solutions', pageWidth - 10, pageHeight - 8, { align: 'right' });
+            }
+
+            doc.save(`${inv.invoiceNumber || 'invoice'}.pdf`);
+        } catch (error) {
+            console.error("PDF Error:", error);
+            alert("Failed to generate PDF. Check console for details.");
+        }
     };
 
     return (
