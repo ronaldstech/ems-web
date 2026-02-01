@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Plus, X, Search, CheckCircle, XCircle, Clock, FileText, Ban, Check, DollarSign, Plane, Wallet, Package, Wrench, Monitor, GraduationCap, Calendar } from 'lucide-react';
+import { Plus, X, Search, CheckCircle, XCircle, Clock, FileText, Ban, Check, DollarSign, Plane, Wallet, Package, Wrench, Monitor, GraduationCap, Calendar, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
+import jsPDF from 'jspdf';
 
 const StatusBadge = ({ status }) => {
     const styles = {
@@ -174,59 +175,133 @@ const RequisitionCard = ({ req, role, user, onEdit, onAction, onView }) => {
                         <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>{req.department}</div>
                     </div>
                 </div>
+            </div>
 
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    {/* Supervisor Actions */}
-                    {role === 'supervisor' && req.status === 'pending_supervisor' && (
-                        <>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onAction(req, 'approve'); }}
-                                style={{ padding: '0.5rem', borderRadius: '8px', border: 'none', background: 'hsl(142, 70%, 90%)', color: 'hsl(142, 72%, 29%)', cursor: 'pointer' }}
-                                title="Approve"
-                            >
-                                <Check size={18} />
-                            </button>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onAction(req, 'reject'); }}
-                                style={{ padding: '0.5rem', borderRadius: '8px', border: 'none', background: 'hsl(0, 100%, 90%)', color: 'hsl(0, 84%, 45%)', cursor: 'pointer' }}
-                                title="Reject"
-                            >
-                                <Ban size={18} />
-                            </button>
-                        </>
-                    )}
-
-                    {/* Manager Actions */}
-                    {role === 'manager' && req.status === 'pending_manager' && (
-                        <>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onAction(req, 'approve'); }}
-                                style={{ padding: '0.5rem', borderRadius: '8px', border: 'none', background: 'hsl(142, 70%, 90%)', color: 'hsl(142, 72%, 29%)', cursor: 'pointer' }}
-                            >
-                                <Check size={18} />
-                            </button>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onAction(req, 'reject'); }}
-                                style={{ padding: '0.5rem', borderRadius: '8px', border: 'none', background: 'hsl(0, 100%, 90%)', color: 'hsl(0, 84%, 45%)', cursor: 'pointer' }}
-                            >
-                                <Ban size={18} />
-                            </button>
-                        </>
-                    )}
-
-                    {/* Employee Edit */}
-                    {isOwner && req.status === 'pending_supervisor' && (
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9' }}>
+                {/* Supervisor Actions */}
+                {role === 'supervisor' && req.status === 'pending_supervisor' && (
+                    <>
                         <button
-                            onClick={(e) => { e.stopPropagation(); onEdit(req); }}
+                            onClick={(e) => { e.stopPropagation(); onAction(req, 'approve'); }}
                             style={{
-                                padding: '0.5rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0',
-                                background: 'white', color: '#1e293b', fontSize: '0.85rem', fontWeight: 600
+                                flex: 1,
+                                padding: '0.6rem',
+                                background: 'linear-gradient(135deg, #10b981, #059669)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '10px',
+                                fontWeight: 600,
+                                fontSize: '0.85rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.5rem'
+                            }}
+                            title="Approve"
+                        >
+                            <CheckCircle size={16} />
+                            Approve
+                        </button>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onAction(req, 'reject'); }}
+                            style={{
+                                flex: 1,
+                                padding: '0.6rem',
+                                background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '10px',
+                                fontWeight: 600,
+                                fontSize: '0.85rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.5rem'
+                            }}
+                            title="Decline"
+                        >
+                            <XCircle size={16} />
+                            Decline
+                        </button>
+                    </>
+                )}
+
+                {/* Manager Actions */}
+                {role === 'manager' && req.status === 'pending_manager' && (
+                    <>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onAction(req, 'approve'); }}
+                            style={{
+                                flex: 1,
+                                padding: '0.6rem',
+                                background: 'linear-gradient(135deg, #10b981, #059669)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '10px',
+                                fontWeight: 600,
+                                fontSize: '0.85rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.5rem'
                             }}
                         >
-                            Edit
+                            <CheckCircle size={16} />
+                            Approve
                         </button>
-                    )}
-                </div>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onAction(req, 'reject'); }}
+                            style={{
+                                flex: 1,
+                                padding: '0.6rem',
+                                background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '10px',
+                                fontWeight: 600,
+                                fontSize: '0.85rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.5rem'
+                            }}
+                        >
+                            <XCircle size={16} />
+                            Decline
+                        </button>
+                    </>
+                )}
+
+                {/* Employee Edit */}
+                {isOwner && req.status === 'pending_supervisor' && (
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onEdit(req); }}
+                        style={{
+                            padding: '0.5rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0',
+                            background: 'white', color: '#1e293b', fontSize: '0.85rem', fontWeight: 600
+                        }}
+                    >
+                        Edit
+                    </button>
+                )}
+
+                {/* Download PDF */}
+                <button
+                    onClick={(e) => { e.stopPropagation(); onAction(req, 'download'); }}
+                    style={{
+                        padding: '0.5rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0',
+                        background: 'white', color: '#2563eb', fontSize: '0.85rem', fontWeight: 600,
+                        display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer'
+                    }}
+                    title="Download PDF"
+                >
+                    <Download size={16} />
+                    PDF
+                </button>
             </div>
         </div>
     );
@@ -251,6 +326,32 @@ const Requisitions = () => {
     const [pinAction, setPinAction] = useState(null); // 'approve' or 'decline'
     const [pinInput, setPinInput] = useState('');
     const [pinError, setPinError] = useState('');
+
+    // E-Signature modal state
+    const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
+    // Removed signatureCanvas state to prevent re-renders
+    const [signatureData, setSignatureData] = useState(null);
+    const [isDrawing, setIsDrawing] = useState(false);
+    const signatureRef = React.useRef(null);
+
+    // Initialize canvas when modal opens
+    useEffect(() => {
+        if (isSignatureModalOpen && signatureRef.current) {
+            const canvas = signatureRef.current;
+            const ctx = canvas.getContext('2d');
+            // Check if already drawn to avoid clearing on minor updates if needed, 
+            // but for now we just want to ensure white background on open.
+            // If we want to persist across close/open we would check signatureData.
+            // But usually we want a fresh start or the saved image. 
+            // Here we just ensure white bg.
+
+            // Only fill if it looks "empty" or just always fill on open?
+            // The issue was it was clearing on every render (mouseup). 
+            // This Effect runs only when modal open state changes.
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+    }, [isSignatureModalOpen]);
 
     // Detail modal state
     const [selectedItem, setSelectedItem] = useState(null);
@@ -281,7 +382,7 @@ const Requisitions = () => {
             setEmployeeDetails(null);
             return;
         }
-        
+
         const employee = employees?.find(emp => emp.id === selectedItem.employeeId);
         if (employee) {
             setEmployeeDetails({ email: employee.email, phone: employee.phone });
@@ -343,6 +444,32 @@ const Requisitions = () => {
         );
     });
 
+    // Calculate badge counts for tabs (only pending items)
+    const getPendingLeaveCount = () => {
+        const pendingStatus = role === 'manager' ? 'pending_manager' : 'pending_supervisor';
+        return leaveRequests.filter(req => {
+            if (role === 'admin') return req.status === pendingStatus;
+            if (role === 'manager') return req.companyId === userData?.companyId && req.status === pendingStatus;
+            if (role === 'supervisor') return req.companyId === userData?.companyId && req.departmentId === userData?.departmentId && req.status === pendingStatus;
+            if (role === 'employee') return req.employeeId === user?.uid && req.status === pendingStatus;
+            return false;
+        }).length;
+    };
+
+    const getPendingRequisitionCount = () => {
+        const pendingStatus = role === 'manager' ? 'pending_manager' : 'pending_supervisor';
+        return requisitions.filter(req => {
+            if (role === 'admin') return req.status === pendingStatus;
+            if (role === 'manager') return req.companyId === userData?.companyId && req.status === pendingStatus;
+            if (role === 'supervisor') return req.companyId === userData?.companyId && req.departmentId === userData?.departmentId && req.status === pendingStatus;
+            if (role === 'employee') return req.employeeId === user?.uid && req.status === pendingStatus;
+            return false;
+        }).length;
+    };
+
+    const pendingLeaveCount = getPendingLeaveCount();
+    const pendingRequisitionCount = getPendingRequisitionCount();
+
     const resetForm = () => {
         setFormData({ title: '', type: 'Purchase Requisition', description: '', amount: '', startDate: '', endDate: '' });
         setEditingId(null);
@@ -394,6 +521,12 @@ const Requisitions = () => {
     };
 
     const handleAction = async (req, action) => {
+        // Handle PDF download
+        if (action === 'download') {
+            await generatePDF(req, 'requisition');
+            return;
+        }
+
         // Require PIN for both approve and reject for supervisors and managers
         if ((action === 'approve' || action === 'reject') && (role === 'supervisor' || role === 'manager')) {
             if (!userData?.approvalPin) {
@@ -440,18 +573,30 @@ const Requisitions = () => {
         }
 
         try {
-            await updateRequisition(rejectReq.id, {
+            const declineData = {
                 status: 'declined',
                 declineReason: declineReason.trim(),
                 updatedAt: new Date().toISOString()
-            });
+            };
+
+            // Use pinReqType if available (from PIN verification), otherwise check rejectReq type
+            const isLeaveRequest = pinReqType === 'leave' || rejectReq.type === 'leave request';
+
+            if (isLeaveRequest) {
+                await updateLeaveRequest(rejectReq.id, declineData);
+            } else {
+                await updateRequisition(rejectReq.id, declineData);
+            }
+
             setIsRejectModalOpen(false);
             setRejectReq(null);
             setDeclineReason('');
             setPinVerifiedForReject(false);
-            toast.success('Request has been declined.');
+            const typeLabel = isLeaveRequest ? 'Leave request' : 'Requisition';
+            toast.success(`${typeLabel} declined successfully.`);
         } catch (error) {
             console.error("Decline error:", error);
+            toast.error('Failed to decline request. Please try again.');
         }
     };
 
@@ -485,6 +630,27 @@ const Requisitions = () => {
             return;
         }
 
+        // If action is approve, show e-signature modal
+        if (pinAction === 'approve') {
+            setPinInput('');
+            setPinError('');
+            setIsPinModalOpen(false);
+            setSignatureData(null);
+            setIsDrawing(false);
+            // Short timeout to ensure modal is closed before opening signature modal
+            setTimeout(() => {
+                setIsSignatureModalOpen(true);
+            }, 100);
+            return;
+        }
+    };
+
+    const handleSignatureComplete = async () => {
+        if (!signatureData) {
+            alert('Please provide your signature');
+            return;
+        }
+
         try {
             if (pinReqType === 'requisition') {
                 let nextStatus = pinReq.status;
@@ -493,6 +659,9 @@ const Requisitions = () => {
 
                 await updateRequisition(pinReq.id, {
                     status: nextStatus,
+                    signature: signatureData,
+                    signedBy: `${userData?.firstName || ''} ${userData?.lastName || ''}`,
+                    signedAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                 });
             } else if (pinReqType === 'leave') {
@@ -505,7 +674,8 @@ const Requisitions = () => {
                         status: 'pending_manager',
                         supervisorApprovedBy: reviewerName,
                         supervisorApprovedAt: currentDate,
-                        supervisorComments: 'Approved by Supervisor'
+                        supervisorComments: 'Approved by Supervisor',
+                        supervisorSignature: signatureData
                     };
                 } else if (role === 'manager' && pinReq.status === 'pending_manager') {
                     updateData = {
@@ -513,22 +683,382 @@ const Requisitions = () => {
                         managerApprovedBy: reviewerName,
                         managerApprovedAt: currentDate,
                         finalApprovedAt: currentDate,
-                        managerComments: 'Approved by Manager'
+                        managerComments: 'Approved by Manager',
+                        managerSignature: signatureData
                     };
                 }
 
                 await updateLeaveRequest(pinReq.id, updateData);
             }
 
-            // success
-            setIsPinModalOpen(false);
+            // Close signature modal and reset states
+            setIsSignatureModalOpen(false);
+            setSignatureData(null);
             setPinReq(null);
             setPinReqType(null);
-            setPinInput('');
-            setPinError('');
+            setPinAction(null);
+            toast.success('Request approved and signed successfully.');
         } catch (err) {
-            console.error('Error approving with PIN', err);
-            setPinError(err.message || 'Failed to approve');
+            console.error('Error completing approval with signature', err);
+            toast.error('Failed to complete approval. Please try again.');
+        }
+    };
+
+    const handleSignatureClear = () => {
+        const canvas = signatureRef.current;
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            setSignatureData(null);
+        }
+    };
+
+    const getCanvasCoordinates = (e, canvas) => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+
+        let clientX, clientY;
+        if (e.touches && e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
+
+        return {
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY
+        };
+    };
+
+    const handleSignatureDraw = (e) => {
+        const canvas = signatureRef.current;
+        if (!canvas) return;
+        e.preventDefault();
+
+        const { x, y } = getCanvasCoordinates(e, canvas);
+        const ctx = canvas.getContext('2d');
+
+        if (e.type === 'mousedown' || e.type === 'touchstart') {
+            setIsDrawing(true);
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+        } else if ((e.type === 'mousemove' || e.type === 'touchmove') && isDrawing) {
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        } else if (e.type === 'mouseup' || e.type === 'touchend') {
+            if (isDrawing) {
+                setIsDrawing(false);
+                // Save signature as data URL
+                const dataUrl = canvas.toDataURL('image/png');
+                setSignatureData(dataUrl);
+            }
+        }
+    };
+
+    const generatePDF = async (item, type) => {
+        try {
+            const doc = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 15;
+            let yPos = margin;
+
+            // Header
+            doc.setFontSize(24);
+            doc.setTextColor(37, 99, 235); // Blue
+            doc.text(type === 'leave' ? 'LEAVE REQUEST' : 'REQUISITION', pageWidth / 2, yPos, { align: 'center' });
+            yPos += 10;
+
+            // Company Info
+            doc.setFontSize(10);
+            doc.setTextColor(100, 116, 139); // Gray
+            doc.text('ApexSpace', margin, yPos);
+            yPos += 5;
+            doc.text(`Ref: ${item.id}`, margin, yPos);
+            yPos += 5;
+            doc.text(`Date: ${new Date().toLocaleDateString()}`, margin, yPos);
+            yPos += 12;
+
+            // Separator line
+            doc.setDrawColor(226, 232, 240);
+            doc.line(margin, yPos, pageWidth - margin, yPos);
+            yPos += 8;
+
+            // Section Title
+            doc.setFontSize(12);
+            doc.setTextColor(30, 41, 59); // Dark
+            doc.setFont(undefined, 'bold');
+            doc.text('REQUEST DETAILS', margin, yPos);
+            yPos += 8;
+
+            // Request Details
+            doc.setFont(undefined, 'normal');
+            doc.setFontSize(10);
+            const leftCol = margin;
+            const rightCol = pageWidth / 2;
+
+            if (type === 'leave') {
+                doc.setTextColor(100, 116, 139);
+                doc.text('Leave Type:', leftCol, yPos);
+                doc.setTextColor(30, 41, 59);
+                doc.text(item.leaveType || '—', leftCol + 35, yPos);
+
+                doc.setTextColor(100, 116, 139);
+                doc.text('Employee:', rightCol, yPos);
+                doc.setTextColor(30, 41, 59);
+                doc.text(item.employeeName || '—', rightCol + 25, yPos);
+                yPos += 7;
+
+                doc.setTextColor(100, 116, 139);
+                doc.text('Start Date:', leftCol, yPos);
+                doc.setTextColor(30, 41, 59);
+                doc.text(new Date(item.startDate).toLocaleDateString(), leftCol + 35, yPos);
+
+                doc.setTextColor(100, 116, 139);
+                doc.text('End Date:', rightCol, yPos);
+                doc.setTextColor(30, 41, 59);
+                doc.text(new Date(item.endDate).toLocaleDateString(), rightCol + 25, yPos);
+                yPos += 7;
+
+                doc.setTextColor(100, 116, 139);
+                doc.text('Total Days:', leftCol, yPos);
+                doc.setTextColor(30, 41, 59);
+                doc.text(`${item.totalDays} day${item.totalDays !== 1 ? 's' : ''}`, leftCol + 35, yPos);
+
+                doc.setTextColor(100, 116, 139);
+                doc.text('Department:', rightCol, yPos);
+                doc.setTextColor(30, 41, 59);
+                doc.text(item.department || '—', rightCol + 25, yPos);
+                yPos += 7;
+
+                doc.setTextColor(100, 116, 139);
+                doc.text('Status:', leftCol, yPos);
+                doc.setTextColor(30, 41, 59);
+                const statusText = item.status?.charAt(0).toUpperCase() + item.status?.slice(1).replace(/_/g, ' ');
+                doc.text(statusText || '—', leftCol + 35, yPos);
+                yPos += 10;
+
+                if (item.reason) {
+                    doc.setTextColor(100, 116, 139);
+                    doc.text('Reason:', leftCol, yPos);
+                    doc.setTextColor(30, 41, 59);
+                    const reasonLines = doc.splitTextToSize(item.reason, pageWidth - 2 * margin - 35);
+                    doc.text(reasonLines, leftCol + 35, yPos);
+                    yPos += reasonLines.length * 5 + 5;
+                }
+            } else {
+                // Requisition details
+                doc.setTextColor(100, 116, 139);
+                doc.text('Title:', leftCol, yPos);
+                doc.setTextColor(30, 41, 59);
+                doc.text(item.title || '—', leftCol + 35, yPos);
+
+                doc.setTextColor(100, 116, 139);
+                doc.text('Type:', rightCol, yPos);
+                doc.setTextColor(30, 41, 59);
+                doc.text(item.type || '—', rightCol + 25, yPos);
+                yPos += 7;
+
+                doc.setTextColor(100, 116, 139);
+                doc.text('Amount:', leftCol, yPos);
+                doc.setTextColor(30, 41, 59);
+                doc.text(item.amount ? `MK ${parseInt(item.amount).toLocaleString()}` : '—', leftCol + 35, yPos);
+
+                doc.setTextColor(100, 116, 139);
+                doc.text('Status:', rightCol, yPos);
+                doc.setTextColor(30, 41, 59);
+                const statusText = item.status?.charAt(0).toUpperCase() + item.status?.slice(1).replace(/_/g, ' ');
+                doc.text(statusText || '—', rightCol + 25, yPos);
+                yPos += 7;
+
+                doc.setTextColor(100, 116, 139);
+                doc.text('Department:', leftCol, yPos);
+                doc.setTextColor(30, 41, 59);
+                doc.text(item.department || '—', leftCol + 35, yPos);
+
+                doc.setTextColor(100, 116, 139);
+                doc.text('Submitted:', rightCol, yPos);
+                doc.setTextColor(30, 41, 59);
+                doc.text(item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '—', rightCol + 25, yPos);
+                yPos += 10;
+
+                if (item.description) {
+                    doc.setTextColor(100, 116, 139);
+                    doc.text('Description:', leftCol, yPos);
+                    doc.setTextColor(30, 41, 59);
+                    const descLines = doc.splitTextToSize(item.description, pageWidth - 2 * margin - 35);
+                    doc.text(descLines, leftCol + 35, yPos);
+                    yPos += descLines.length * 5 + 5;
+                }
+            }
+
+            // Check if signature should be displayed
+            const isLeave = type === 'leave';
+            const hasSignature = isLeave
+                ? (item.supervisorSignature || item.managerSignature)
+                : item.signature;
+
+            if (hasSignature) {
+                yPos += 5;
+                // Separator
+                doc.setDrawColor(226, 232, 240);
+                doc.line(margin, yPos, pageWidth - margin, yPos);
+                yPos += 10;
+
+                // Signature section
+                doc.setFontSize(12);
+                doc.setTextColor(30, 41, 59);
+                doc.setFont(undefined, 'bold');
+                doc.text('APPROVAL & SIGNATURES', margin, yPos);
+                yPos += 10;
+
+                doc.setFont(undefined, 'normal');
+                doc.setFontSize(10);
+                doc.setTextColor(100, 116, 139);
+
+                if (isLeave) {
+                    // LEFT COLUMN: Supervisor
+                    const supX = margin;
+                    // Only show supervisor section if there is approval info
+                    if (item.supervisorSignature || item.supervisorApprovedBy) {
+                        doc.setTextColor(30, 41, 59);
+                        doc.setFont(undefined, 'bold');
+                        doc.text('Supervisor Approval:', supX, yPos);
+
+                        let currentY = yPos + 7;
+                        if (item.supervisorSignature) {
+                            try {
+                                doc.addImage(item.supervisorSignature, 'PNG', supX, currentY, 40, 20);
+                                currentY += 25;
+                            } catch {
+                                console.log('Could not add supervisor signature image');
+                                currentY += 5;
+                            }
+                        } else {
+                            currentY += 5;
+                        }
+
+                        doc.setFont(undefined, 'normal');
+                        doc.setTextColor(100, 116, 139);
+                        doc.text('Approved By:', supX, currentY);
+                        doc.setTextColor(30, 41, 59);
+                        doc.text(item.supervisorApprovedBy || '—', supX + 25, currentY);
+                        currentY += 5;
+
+                        doc.setTextColor(100, 116, 139);
+                        doc.text('Date:', supX, currentY);
+                        doc.setTextColor(30, 41, 59);
+                        doc.text(item.supervisorApprovedAt ? new Date(item.supervisorApprovedAt).toLocaleDateString() : '—', supX + 25, currentY);
+                    }
+
+                    // RIGHT COLUMN: Manager
+                    const mgrX = pageWidth / 2 + 10;
+                    // Only show manager section if there is approval info
+                    if (item.managerSignature || item.managerApprovedBy) {
+                        // Reset Y for right column to match left column start
+                        let mgrY = yPos;
+
+                        doc.setTextColor(30, 41, 59);
+                        doc.setFont(undefined, 'bold');
+                        doc.text('Manager Approval:', mgrX, mgrY);
+
+                        mgrY += 7;
+                        if (item.managerSignature) {
+                            try {
+                                doc.addImage(item.managerSignature, 'PNG', mgrX, mgrY, 40, 20);
+                                mgrY += 25;
+                            } catch {
+                                console.log('Could not add manager signature image');
+                                mgrY += 5;
+                            }
+                        } else {
+                            mgrY += 5;
+                        }
+
+                        doc.setFont(undefined, 'normal');
+                        doc.setTextColor(100, 116, 139);
+                        doc.text('Approved By:', mgrX, mgrY);
+                        doc.setTextColor(30, 41, 59);
+                        doc.text(item.managerApprovedBy || '—', mgrX + 25, mgrY);
+                        mgrY += 5;
+
+                        doc.setTextColor(100, 116, 139);
+                        doc.text('Date:', mgrX, mgrY);
+                        doc.setTextColor(30, 41, 59);
+                        doc.text(item.managerApprovedAt ? new Date(item.managerApprovedAt).toLocaleDateString() : '—', mgrX + 25, mgrY);
+                    }
+
+                    // Advance yPos for next section (take max height)
+                    yPos += 45;
+
+                } else {
+                    // Original Single Signature Logic for Requisitions
+                    const signatureImage = item.signature;
+                    const approvedBy = item.signedBy;
+                    const approvedAt = item.signedAt;
+
+                    if (signatureImage) {
+                        try {
+                            doc.addImage(signatureImage, 'PNG', margin, yPos, 40, 20);
+                            yPos += 25;
+                        } catch {
+                            console.log('Could not add signature image');
+                        }
+                    }
+
+                    doc.setTextColor(30, 41, 59);
+                    doc.text('Approved By:', margin, yPos);
+                    doc.text(approvedBy || '—', margin + 35, yPos);
+                    yPos += 7;
+
+                    doc.setTextColor(100, 116, 139);
+                    doc.text('Date:', margin, yPos);
+                    doc.setTextColor(30, 41, 59);
+                    doc.text(approvedAt ? new Date(approvedAt).toLocaleDateString() : '—', margin + 35, yPos);
+                }
+            }
+
+            // Decline reason if applicable
+            if (item.status === 'declined' && item.declineReason) {
+                yPos += 10;
+                doc.setDrawColor(226, 232, 240);
+                doc.line(margin, yPos, pageWidth - margin, yPos);
+                yPos += 10;
+
+                doc.setFontSize(12);
+                doc.setTextColor(220, 38, 38); // Red for decline
+                doc.setFont(undefined, 'bold');
+                doc.text('DECLINE REASON', margin, yPos);
+                yPos += 8;
+
+                doc.setFont(undefined, 'normal');
+                doc.setFontSize(10);
+                doc.setTextColor(100, 116, 139);
+                const reasonLines = doc.splitTextToSize(item.declineReason, pageWidth - 2 * margin);
+                doc.text(reasonLines, margin, yPos);
+            }
+
+            // Footer
+            yPos = pageHeight - 10;
+            doc.setFontSize(8);
+            doc.setTextColor(148, 163, 184); // Light gray
+            doc.text(`Generated on ${new Date().toLocaleString()} | ApexSpace`, pageWidth / 2, yPos, { align: 'center' });
+
+            // Download PDF
+            const fileName = type === 'leave' ? `leave-request-${item.id}.pdf` : `requisition-${item.id}.pdf`;
+            doc.save(fileName);
+            toast.success('PDF downloaded successfully.');
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            toast.error('Failed to generate PDF.');
         }
     };
 
@@ -729,7 +1259,7 @@ const Requisitions = () => {
                     }}
                 >
                     <Calendar size={18} />
-                    Leave Requests {visibleLeaveRequests.length > 0 && <span style={{ background: '#2563eb', color: 'white', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700 }}>{visibleLeaveRequests.length}</span>}
+                    Leave Requests {pendingLeaveCount > 0 && <span style={{ background: '#2563eb', color: 'white', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700 }}>{pendingLeaveCount}</span>}
                 </button>
                 <button
                     onClick={() => setActiveTab('requisitions')}
@@ -751,7 +1281,7 @@ const Requisitions = () => {
                     }}
                 >
                     <FileText size={18} />
-                    Requisitions {visibleRequisitions.length > 0 && <span style={{ background: '#2563eb', color: 'white', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700 }}>{visibleRequisitions.length}</span>}
+                    Requisitions {pendingRequisitionCount > 0 && <span style={{ background: '#2563eb', color: 'white', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700 }}>{pendingRequisitionCount}</span>}
                 </button>
             </div>
 
@@ -907,6 +1437,25 @@ const Requisitions = () => {
                                         )}
                                     </div>
 
+                                    {/* Decline Reason Display */}
+                                    {req.status === 'declined' && req.declineReason && (
+                                        <div style={{
+                                            padding: '0.75rem',
+                                            borderRadius: '10px',
+                                            backgroundColor: 'hsl(0, 100%, 98%)',
+                                            border: '1px dashed hsl(0, 100%, 90%)',
+                                            fontSize: '0.85rem',
+                                            marginBottom: '1rem'
+                                        }}>
+                                            <div style={{ fontWeight: 700, color: 'hsl(0, 84%, 45%)', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <XCircle size={12} /> Decline Reason
+                                            </div>
+                                            <p style={{ margin: 0, color: 'hsl(0, 50%, 40%)', fontStyle: 'italic' }}>
+                                                "{req.declineReason}"
+                                            </p>
+                                        </div>
+                                    )}
+
                                     {/* Action Buttons - Hierarchical Approval Logic */}
                                     {(
                                         (role === 'supervisor' && req.status === 'pending_supervisor') ||
@@ -953,10 +1502,35 @@ const Requisitions = () => {
                                                     }}
                                                 >
                                                     <XCircle size={16} />
-                                                    Reject
+                                                    Decline
                                                 </button>
                                             </div>
                                         )}
+
+                                    {/* Download PDF Button */}
+                                    <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9' }}>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); generatePDF(req, 'leave'); }}
+                                            style={{
+                                                flex: 1,
+                                                padding: '0.6rem',
+                                                background: 'white',
+                                                color: '#2563eb',
+                                                border: '1px solid #e2e8f0',
+                                                borderRadius: '10px',
+                                                fontWeight: 600,
+                                                fontSize: '0.85rem',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '0.5rem'
+                                            }}
+                                        >
+                                            <Download size={16} />
+                                            Download PDF
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         ))}
@@ -1441,8 +2015,8 @@ const Requisitions = () => {
                     }}>
                         <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
-                                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#1e293b' }}>Enter Approval PIN</h3>
-                                <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>Confirm your identity to complete this approval.</p>
+                                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#1e293b' }}>Enter PIN</h3>
+                                <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>Confirm your identity to complete this action.</p>
                             </div>
                             <button onClick={() => { setIsPinModalOpen(false); setPinReq(null); setPinReqType(null); setPinError(''); }} style={{ width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b' }}>
                                 <X size={18} />
@@ -1465,6 +2039,122 @@ const Requisitions = () => {
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
                                 <button onClick={() => { setIsPinModalOpen(false); setPinReq(null); setPinReqType(null); setPinError(''); }} style={{ padding: '0.7rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0', background: 'white', color: '#475569' }}>Cancel</button>
                                 <button onClick={confirmPinAndApprove} style={{ padding: '0.7rem 1rem', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #10b981, #059669)', color: 'white', fontWeight: 700 }}>Confirm</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* E-Signature Modal */}
+            {isSignatureModalOpen && (
+                <div className="modal-overlay" onClick={() => {
+                    setIsSignatureModalOpen(false);
+                    setPinReq(null);
+                    setPinReqType(null);
+                    setPinAction(null);
+                    setSignatureData(null);
+                    setIsDrawing(false);
+                }}>
+                    <div className="fade-in" onClick={(e) => e.stopPropagation()} style={{
+                        backgroundColor: 'rgba(255,255,255,0.98)', backdropFilter: 'blur(12px)',
+                        borderRadius: '20px', maxWidth: '600px', width: '95%', padding: '0',
+                        overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+                    }}>
+                        <div style={{ padding: '1.25rem 1.75rem', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#1e293b' }}>E-Signature Required</h3>
+                                <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>Please sign to confirm your approval</p>
+                            </div>
+                            <button onClick={() => {
+                                setIsSignatureModalOpen(false);
+                                setPinReq(null);
+                                setPinReqType(null);
+                                setPinAction(null);
+                                setSignatureData(null);
+                                setIsDrawing(false);
+                            }} style={{ width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div style={{ padding: '1.5rem' }}>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <p style={{ fontSize: '0.9rem', color: '#475569', marginBottom: '1rem' }}>
+                                    <strong>Signing as:</strong> {userData?.firstName} {userData?.lastName}
+                                </p>
+                                <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1rem' }}>
+                                    {pinReqType === 'leave' ? 'Leave Request' : 'Requisition'} Approval - {new Date().toLocaleDateString()}
+                                </p>
+                            </div>
+
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>Your Signature</label>
+                                <canvas
+                                    ref={signatureRef}
+                                    onMouseDown={handleSignatureDraw}
+                                    onMouseMove={handleSignatureDraw}
+                                    onMouseUp={handleSignatureDraw}
+                                    onTouchStart={handleSignatureDraw}
+                                    onTouchMove={handleSignatureDraw}
+                                    onTouchEnd={handleSignatureDraw}
+                                    width={550}
+                                    height={180}
+                                    style={{
+                                        border: '2px solid #e2e8f0',
+                                        borderRadius: '12px',
+                                        cursor: 'crosshair',
+                                        backgroundColor: 'white',
+                                        display: 'block',
+                                        width: '100%',
+                                        height: '180px',
+                                        touchAction: 'none'
+                                    }}
+                                />
+                                <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.5rem' }}>
+                                    Sign above using your mouse or finger
+                                </p>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        handleSignatureClear();
+                                        setIsDrawing(false);
+                                    }}
+                                    style={{
+                                        padding: '0.875rem 1.75rem', borderRadius: '14px', border: '1px solid #e2e8f0',
+                                        background: 'white', color: '#475569', fontWeight: 600, cursor: 'pointer'
+                                    }}
+                                >
+                                    Clear
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsSignatureModalOpen(false);
+                                        setPinReq(null);
+                                        setPinReqType(null);
+                                        setPinAction(null);
+                                        setSignatureData(null);
+                                        setIsDrawing(false);
+                                    }}
+                                    style={{
+                                        padding: '0.875rem 1.75rem', borderRadius: '14px', border: '1px solid #e2e8f0',
+                                        background: 'white', color: '#475569', fontWeight: 600, cursor: 'pointer'
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSignatureComplete}
+                                    style={{
+                                        padding: '0.875rem 2rem', borderRadius: '14px', border: 'none',
+                                        background: 'linear-gradient(135deg, #10b981, #059669)', color: 'white', fontWeight: 700,
+                                        cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.2)'
+                                    }}
+                                >
+                                    Sign & Approve
+                                </button>
                             </div>
                         </div>
                     </div>
