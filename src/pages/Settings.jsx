@@ -4,7 +4,7 @@ import { Settings as SettingsIcon, Building2, Save, Loader2, Image as ImageIcon,
 import toast from 'react-hot-toast';
 
 const Settings = () => {
-    const { userData, companies, updateCompany, uploadToExternalServer } = useApp();
+    const { userData, companies, updateCompany, uploadToExternalServer, updateUserProfile } = useApp();
     const [loading, setLoading] = useState(false);
     const [uploadingLogo, setUploadingLogo] = useState(false);
     const [logoProgress, setLogoProgress] = useState(0);
@@ -73,14 +73,42 @@ const Settings = () => {
         }
     };
 
-    if (!userData || userData.role?.toLowerCase() !== 'manager') {
+    if (!userData) {
         return (
             <div className="page-container" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-                <h2 style={{ color: '#ef4444' }}>Access Denied</h2>
-                <p>Only managers can access company settings.</p>
+                <h2 style={{ color: '#ef4444' }}>Not Signed In</h2>
+                <p>Please sign in to access settings.</p>
             </div>
         );
     }
+
+    // Local state for approval PIN
+    const [pin, setPin] = useState('');
+    const [savingPin, setSavingPin] = useState(false);
+
+    useEffect(() => {
+        setPin(userData?.approvalPin || '');
+    }, [userData]);
+
+    const handleSavePin = async (e) => {
+        e?.preventDefault();
+        if (!userData) return;
+        if (!/^[0-9]{4,6}$/.test(pin)) {
+            toast.error('PIN must be 4-6 digits.');
+            return;
+        }
+
+        try {
+            setSavingPin(true);
+            await updateUserProfile(userData.id, { approvalPin: pin, approvalPinSetAt: new Date().toISOString() });
+            toast.success('Approval PIN saved');
+        } catch (err) {
+            console.error('Error saving PIN', err);
+            toast.error(err.message || 'Failed to save PIN');
+        } finally {
+            setSavingPin(false);
+        }
+    };
 
     return (
         <div className="page-container" style={{ width: '100%', maxWidth: '1000px', margin: '0 auto' }}>
@@ -213,6 +241,31 @@ const Settings = () => {
                         </form>
                     </div>
 
+                </div>
+            </div>
+
+            {/* Personal Approval PIN Section */}
+            <div style={{ marginTop: '2rem', display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
+                <div className="card" style={{ padding: '1.5rem', borderRadius: '16px', background: 'white', border: '1px solid #f1f5f9' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>Approval PIN</h3>
+                    <p style={{ margin: '6px 0 12px', color: '#64748b' }}>Set a numeric PIN that will be required when approving requisitions or leave requests.</p>
+
+                    <form onSubmit={handleSavePin} style={{ display: 'flex', gap: '12px', alignItems: 'center', marginTop: '8px' }}>
+                        <input
+                            type="password"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={pin}
+                            onChange={(e) => setPin(e.target.value.replace(/[^0-9]/g, ''))}
+                            placeholder="Enter 4-6 digit PIN"
+                            style={{ padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '1rem', width: '220px' }}
+                        />
+                        <button type="submit" disabled={savingPin} style={{ padding: '0.75rem 1rem', borderRadius: '10px', border: 'none', background: 'hsl(var(--primary))', color: 'white', fontWeight: 700 }}>
+                            {savingPin ? 'Saving...' : 'Save PIN'}
+                        </button>
+                    </form>
+
+                    <p style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: '#94a3b8' }}>If you are a team leader or manager, this PIN will be required to confirm approvals.</p>
                 </div>
             </div>
 

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Plus, X, Search, CheckCircle, XCircle, Clock, FileText, Ban, Check, DollarSign, Plane, Wallet, Package, Wrench, Monitor, GraduationCap, Calendar } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const StatusBadge = ({ status }) => {
     const styles = {
@@ -53,7 +54,7 @@ const StatusBadge = ({ status }) => {
     );
 };
 
-const RequisitionCard = ({ req, role, user, onEdit, onAction }) => {
+const RequisitionCard = ({ req, role, user, onEdit, onAction, onView }) => {
     const isOwner = req.employeeId === user?.uid;
 
     const getTypeIcon = (type) => {
@@ -73,7 +74,7 @@ const RequisitionCard = ({ req, role, user, onEdit, onAction }) => {
     };
 
     return (
-        <div className="card fade-in" style={{
+        <div className="card fade-in" onClick={() => onView?.(req, 'requisition')} style={{
             display: 'flex',
             flexDirection: 'column',
             gap: '1.25rem',
@@ -179,14 +180,14 @@ const RequisitionCard = ({ req, role, user, onEdit, onAction }) => {
                     {role === 'team_leader' && req.status === 'pending_leader' && (
                         <>
                             <button
-                                onClick={() => onAction(req, 'approve')}
+                                onClick={(e) => { e.stopPropagation(); onAction(req, 'approve'); }}
                                 style={{ padding: '0.5rem', borderRadius: '8px', border: 'none', background: 'hsl(142, 70%, 90%)', color: 'hsl(142, 72%, 29%)', cursor: 'pointer' }}
                                 title="Approve"
                             >
                                 <Check size={18} />
                             </button>
                             <button
-                                onClick={() => onAction(req, 'reject')}
+                                onClick={(e) => { e.stopPropagation(); onAction(req, 'reject'); }}
                                 style={{ padding: '0.5rem', borderRadius: '8px', border: 'none', background: 'hsl(0, 100%, 90%)', color: 'hsl(0, 84%, 45%)', cursor: 'pointer' }}
                                 title="Reject"
                             >
@@ -199,13 +200,13 @@ const RequisitionCard = ({ req, role, user, onEdit, onAction }) => {
                     {role === 'manager' && req.status === 'pending_manager' && (
                         <>
                             <button
-                                onClick={() => onAction(req, 'approve')}
+                                onClick={(e) => { e.stopPropagation(); onAction(req, 'approve'); }}
                                 style={{ padding: '0.5rem', borderRadius: '8px', border: 'none', background: 'hsl(142, 70%, 90%)', color: 'hsl(142, 72%, 29%)', cursor: 'pointer' }}
                             >
                                 <Check size={18} />
                             </button>
                             <button
-                                onClick={() => onAction(req, 'reject')}
+                                onClick={(e) => { e.stopPropagation(); onAction(req, 'reject'); }}
                                 style={{ padding: '0.5rem', borderRadius: '8px', border: 'none', background: 'hsl(0, 100%, 90%)', color: 'hsl(0, 84%, 45%)', cursor: 'pointer' }}
                             >
                                 <Ban size={18} />
@@ -216,7 +217,7 @@ const RequisitionCard = ({ req, role, user, onEdit, onAction }) => {
                     {/* Employee Edit */}
                     {isOwner && req.status === 'pending_leader' && (
                         <button
-                            onClick={() => onEdit(req)}
+                            onClick={(e) => { e.stopPropagation(); onEdit(req); }}
                             style={{
                                 padding: '0.5rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0',
                                 background: 'white', color: '#1e293b', fontSize: '0.85rem', fontWeight: 600
@@ -232,15 +233,60 @@ const RequisitionCard = ({ req, role, user, onEdit, onAction }) => {
 };
 
 const Requisitions = () => {
-    const { requisitions, addRequisition, updateRequisition, leaveRequests, addLeaveRequest, updateLeaveRequest, userData, user } = useApp();
-    const [activeTab, setActiveTab] = useState('requisitions'); // 'requisitions' or 'leave'
+    const { requisitions, addRequisition, updateRequisition, leaveRequests, addLeaveRequest, updateLeaveRequest, userData, user, employees } = useApp();
+    const [activeTab, setActiveTab] = useState('leave'); // 'requisitions' or 'leave'
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
     const [rejectReq, setRejectReq] = useState(null);
     const [rejectionReason, setRejectionReason] = useState('');
+    const [pinVerifiedForReject, setPinVerifiedForReject] = useState(false); // Track if PIN was verified for rejection
     const [editingId, setEditingId] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
+
+    // PIN modal state for approvals and rejections
+    const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+    const [pinReq, setPinReq] = useState(null); // the request being approved/rejected
+    const [pinReqType, setPinReqType] = useState(null); // 'requisition' or 'leave'
+    const [pinAction, setPinAction] = useState(null); // 'approve' or 'reject'
+    const [pinInput, setPinInput] = useState('');
+    const [pinError, setPinError] = useState('');
+
+    // Detail modal state
+    const [selectedItem, setSelectedItem] = useState(null);
+    const [selectedType, setSelectedType] = useState(null); // 'requisition' or 'leave'
+    const [employeeDetails, setEmployeeDetails] = useState(null);
+
+    const openDetail = (item, type) => {
+        setSelectedItem(item);
+        setSelectedType(type);
+    };
+
+    const closeDetail = () => {
+        setSelectedItem(null);
+        setSelectedType(null);
+        setEmployeeDetails(null);
+    };
+
+    useEffect(() => {
+        if (!selectedItem) return;
+        const onKey = (e) => { if (e.key === 'Escape') closeDetail(); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [selectedItem]);
+
+    // Fetch employee details (email and phone) when modal opens
+    useEffect(() => {
+        if (!selectedItem || !selectedItem.employeeId) {
+            setEmployeeDetails(null);
+            return;
+        }
+        
+        const employee = employees?.find(emp => emp.id === selectedItem.employeeId);
+        if (employee) {
+            setEmployeeDetails({ email: employee.email, phone: employee.phone });
+        }
+    }, [selectedItem, employees]);
 
     const [formData, setFormData] = useState({
         title: '',
@@ -344,15 +390,34 @@ const Requisitions = () => {
     };
 
     const handleAction = async (req, action) => {
+        // Require PIN for both approve and reject for team leaders and managers
+        if ((action === 'approve' || action === 'reject') && (role === 'team_leader' || role === 'manager')) {
+            if (!userData?.approvalPin) {
+                toast.error('You must set an approval PIN in Settings before approving or declining requests.');
+                return;
+            }
+            setPinReq(req);
+            setPinReqType('requisition');
+            setPinAction(action);
+            setPinInput('');
+            setPinError('');
+            setPinVerifiedForReject(false);
+            setIsPinModalOpen(true);
+            return;
+        }
+
+        // For other roles, reject without PIN
         if (action === 'reject') {
             setRejectReq(req);
+            setPinVerifiedForReject(false);
+            setRejectionReason('');
             setIsRejectModalOpen(true);
             return;
         }
 
         if (!confirm(`Are you sure you want to approve this request?`)) return;
-        let nextStatus = req.status;
 
+        let nextStatus = req.status;
         if (action === 'approve') {
             if (req.status === 'pending_leader') nextStatus = 'pending_manager';
             else if (req.status === 'pending_manager') nextStatus = 'approved';
@@ -379,8 +444,87 @@ const Requisitions = () => {
             setIsRejectModalOpen(false);
             setRejectReq(null);
             setRejectionReason('');
+            setPinVerifiedForReject(false);
+            toast.success('Request has been declined.');
         } catch (error) {
             console.error("Rejection error:", error);
+        }
+    };
+
+    const confirmPinAndApprove = async () => {
+        if (!pinReq || !pinReqType) return;
+        if (!pinInput || pinInput.trim() === '') {
+            setPinError('Please enter your PIN');
+            return;
+        }
+
+        if (!userData?.approvalPin) {
+            setPinError('No PIN set. Go to Settings to set your approval PIN.');
+            return;
+        }
+
+        if (pinInput !== userData.approvalPin) {
+            setPinError('Incorrect PIN');
+            return;
+        }
+
+        // If action is reject, move to rejection reason screen
+        if (pinAction === 'reject') {
+            setPinVerifiedForReject(true);
+            setPinInput('');
+            setPinError('');
+            setRejectReq(pinReq);
+            setRejectionReason('');
+            setIsPinModalOpen(false);
+            setIsRejectModalOpen(true);
+            // Keep modal open but will show rejection reason field instead of PIN field
+            return;
+        }
+
+        try {
+            if (pinReqType === 'requisition') {
+                let nextStatus = pinReq.status;
+                if (pinReq.status === 'pending_leader') nextStatus = 'pending_manager';
+                else if (pinReq.status === 'pending_manager') nextStatus = 'approved';
+
+                await updateRequisition(pinReq.id, {
+                    status: nextStatus,
+                    updatedAt: new Date().toISOString()
+                });
+            } else if (pinReqType === 'leave') {
+                let updateData = {};
+                const currentDate = new Date().toISOString();
+                const reviewerName = `${userData?.firstName || ''} ${userData?.lastName || ''}`;
+
+                if (role === 'team_leader' && pinReq.status === 'pending_leader') {
+                    updateData = {
+                        status: 'pending_manager',
+                        teamLeaderApprovedBy: reviewerName,
+                        teamLeaderApprovedAt: currentDate,
+                        teamLeaderComments: 'Approved by Team Leader'
+                    };
+                } else if (role === 'manager' && pinReq.status === 'pending_manager') {
+                    updateData = {
+                        status: 'approved',
+                        managerApprovedBy: reviewerName,
+                        managerApprovedAt: currentDate,
+                        finalApprovedAt: currentDate,
+                        managerComments: 'Approved by Manager'
+                    };
+                }
+
+                await updateLeaveRequest(pinReq.id, updateData);
+            }
+
+            // success
+            setIsPinModalOpen(false);
+            setPinReq(null);
+            setPinReqType(null);
+            setPinInput('');
+            setPinError('');
+        } catch (err) {
+            console.error('Error approving with PIN', err);
+            setPinError(err.message || 'Failed to approve');
         }
     };
 
@@ -414,16 +558,73 @@ const Requisitions = () => {
 
     const handleLeaveAction = async (req, action) => {
         if (action === 'reject') {
+            // Require PIN for reject for team leaders and managers
+            if (role === 'team_leader' || role === 'manager') {
+                if (!userData?.approvalPin) {
+                    toast.error('You must set an approval PIN in Settings before declining requests.');
+                    return;
+                }
+                setPinReq(req);
+                setPinReqType('leave');
+                setPinAction('reject');
+                setPinInput('');
+                setPinError('');
+                setPinVerifiedForReject(false);
+                setIsPinModalOpen(true);
+                return;
+            }
+            // For other roles, reject without PIN
             setRejectReq(req);
+            setPinVerifiedForReject(false);
+            setRejectionReason('');
             setIsRejectModalOpen(true);
             return;
         }
 
+        // Require approval PIN for team leaders and managers
+        if (action === 'approve' && (role === 'team_leader' || role === 'manager')) {
+            if (!userData?.approvalPin) {
+                toast.error('You must set an approval PIN in Settings before approving requests.');
+                return;
+            }
+            setPinReq(req);
+            setPinReqType('leave');
+            setPinAction('approve');
+            setPinInput('');
+            setPinError('');
+            setPinVerifiedForReject(false);
+            setIsPinModalOpen(true);
+            return;
+        }
+
         try {
-            await updateLeaveRequest(req.id, {
-                status: action === 'approve' ? 'approved' : 'rejected',
-                reviewedBy: `${userData?.firstName || ''} ${userData?.lastName || ''}`,
-            });
+            let updateData = {};
+            const currentDate = new Date().toISOString();
+            const reviewerName = `${userData?.firstName || ''} ${userData?.lastName || ''}`;
+
+            if (action === 'approve') {
+                // Team Leader approval: escalate to manager
+                if (role === 'team_leader' && req.status === 'pending_leader') {
+                    updateData = {
+                        status: 'pending_manager',
+                        teamLeaderApprovedBy: reviewerName,
+                        teamLeaderApprovedAt: currentDate,
+                        teamLeaderComments: 'Approved by Team Leader'
+                    };
+                }
+                // Manager approval: final approval
+                else if (role === 'manager' && req.status === 'pending_manager') {
+                    updateData = {
+                        status: 'approved',
+                        managerApprovedBy: reviewerName,
+                        managerApprovedAt: currentDate,
+                        finalApprovedAt: currentDate,
+                        managerComments: 'Approved by Manager'
+                    };
+                }
+            }
+
+            await updateLeaveRequest(req.id, updateData);
         } catch (error) {
             console.error("Error updating leave request:", error);
         }
@@ -643,7 +844,7 @@ const Requisitions = () => {
                     }}>
                         {visibleLeaveRequests.map((req, idx) => (
                             <div key={req.id} style={{ animationDelay: `${idx * 0.05}s` }} className="fade-in">
-                                <div style={{
+                                <div onClick={() => openDetail(req, 'leave')} style={{
                                     background: 'white',
                                     borderRadius: '20px',
                                     padding: '1.5rem',
@@ -701,53 +902,56 @@ const Requisitions = () => {
                                         )}
                                     </div>
 
-                                    {/* Action Buttons for Managers/Leaders */}
-                                    {(role === 'manager' || role === 'team_leader') && req.status === 'pending' && (
-                                        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9' }}>
-                                            <button
-                                                onClick={() => handleLeaveAction(req, 'approve')}
-                                                style={{
-                                                    flex: 1,
-                                                    padding: '0.6rem',
-                                                    background: 'linear-gradient(135deg, #10b981, #059669)',
-                                                    color: 'white',
-                                                    border: 'none',
-                                                    borderRadius: '10px',
-                                                    fontWeight: 600,
-                                                    fontSize: '0.85rem',
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    gap: '0.5rem'
-                                                }}
-                                            >
-                                                <CheckCircle size={16} />
-                                                Approve
-                                            </button>
-                                            <button
-                                                onClick={() => handleLeaveAction(req, 'reject')}
-                                                style={{
-                                                    flex: 1,
-                                                    padding: '0.6rem',
-                                                    background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                                                    color: 'white',
-                                                    border: 'none',
-                                                    borderRadius: '10px',
-                                                    fontWeight: 600,
-                                                    fontSize: '0.85rem',
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    gap: '0.5rem'
-                                                }}
-                                            >
-                                                <XCircle size={16} />
-                                                Reject
-                                            </button>
-                                        </div>
-                                    )}
+                                    {/* Action Buttons - Hierarchical Approval Logic */}
+                                    {(
+                                        (role === 'team_leader' && req.status === 'pending_leader') ||
+                                        (role === 'manager' && req.status === 'pending_manager')
+                                    ) && (
+                                            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9' }}>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleLeaveAction(req, 'approve'); }}
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '0.6rem',
+                                                        background: 'linear-gradient(135deg, #10b981, #059669)',
+                                                        color: 'white',
+                                                        border: 'none',
+                                                        borderRadius: '10px',
+                                                        fontWeight: 600,
+                                                        fontSize: '0.85rem',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: '0.5rem'
+                                                    }}
+                                                >
+                                                    <CheckCircle size={16} />
+                                                    Approve
+                                                </button>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleLeaveAction(req, 'reject'); }}
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '0.6rem',
+                                                        background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                                                        color: 'white',
+                                                        border: 'none',
+                                                        borderRadius: '10px',
+                                                        fontWeight: 600,
+                                                        fontSize: '0.85rem',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: '0.5rem'
+                                                    }}
+                                                >
+                                                    <XCircle size={16} />
+                                                    Reject
+                                                </button>
+                                            </div>
+                                        )}
                                 </div>
                             </div>
                         ))}
@@ -784,6 +988,7 @@ const Requisitions = () => {
                                     user={user}
                                     onEdit={handleEdit}
                                     onAction={handleAction}
+                                    onView={openDetail}
                                 />
                             </div>
                         ))}
@@ -921,10 +1126,14 @@ const Requisitions = () => {
                                             <div style={{ position: 'relative' }}>
                                                 <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: '#94a3b8' }}>MK</div>
                                                 <input
-                                                    type="number"
-                                                    value={formData.amount}
-                                                    onChange={e => setFormData({ ...formData, amount: e.target.value })}
-                                                    placeholder="0.00"
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    value={formData.amount ? parseInt(formData.amount).toLocaleString() : ''}
+                                                    onChange={e => {
+                                                        const numValue = e.target.value.replace(/,/g, '');
+                                                        setFormData({ ...formData, amount: numValue || '' });
+                                                    }}
+                                                    placeholder="0"
                                                     style={{ width: '100%', padding: '0.875rem 0.875rem 0.875rem 3rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem' }}
                                                 />
                                             </div>
@@ -993,8 +1202,8 @@ const Requisitions = () => {
                 </div>
             )}
 
-            {/* Rejection Modal */}
-            {isRejectModalOpen && (
+            {/* Rejection Modal - PIN Entry or Reason */}
+            {(isRejectModalOpen || (isPinModalOpen && pinAction === 'reject' && pinVerifiedForReject)) && (
                 <div className="modal-overlay">
                     <div className="fade-in" style={{
                         backgroundColor: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(16px)',
@@ -1009,13 +1218,13 @@ const Requisitions = () => {
                         }}>
                             <div>
                                 <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#b91c1c' }}>
-                                    Reject Requisition
+                                    Decline Request
                                 </h3>
                                 <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
-                                    Please provide a reason for declining this request
+                                    {pinVerifiedForReject ? 'Please provide a reason for declining this request' : 'Enter your PIN to decline this request'}
                                 </p>
                             </div>
-                            <button onClick={() => { setIsRejectModalOpen(false); setRejectReq(null); setRejectionReason(''); }} style={{
+                            <button onClick={() => { setIsRejectModalOpen(false); setRejectReq(null); setRejectionReason(''); setPinVerifiedForReject(false); setPinInput(''); setPinError(''); setIsPinModalOpen(false); }} style={{
                                 width: '36px', height: '36px', borderRadius: '10px',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b'
@@ -1024,42 +1233,233 @@ const Requisitions = () => {
                             </button>
                         </div>
                         <div style={{ padding: '2rem' }}>
-                            <div style={{ marginBottom: '1.5rem' }}>
-                                <div style={{
-                                    padding: '1rem', borderRadius: '12px', backgroundColor: '#f8fafc',
-                                    border: '1px solid #f1f5f9', marginBottom: '1.5rem'
-                                }}>
-                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', marginBottom: '4px' }}>Request</div>
-                                    <div style={{ fontWeight: 700, color: '#1e293b' }}>{rejectReq?.title}</div>
+                            {/* Show PIN entry for manager/team_leader */}
+                            {!pinVerifiedForReject && (role === 'team_leader' || role === 'manager') ? (
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <div style={{
+                                        padding: '1rem', borderRadius: '12px', backgroundColor: '#f8fafc',
+                                        border: '1px solid #f1f5f9', marginBottom: '1.5rem'
+                                    }}>
+                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', marginBottom: '4px' }}>Request</div>
+                                        <div style={{ fontWeight: 700, color: '#1e293b' }}>{rejectReq?.title || pinReq?.title}</div>
+                                    </div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>Enter PIN</label>
+                                    <input
+                                        type="password"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        value={pinInput}
+                                        onChange={(e) => { setPinInput(e.target.value.replace(/[^0-9]/g, '')); setPinError(''); }}
+                                        placeholder="Enter your PIN"
+                                        style={{ width: '100%', padding: '0.875rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem', marginBottom: '0.5rem' }}
+                                        autoFocus
+                                    />
+                                    {pinError && <div style={{ color: '#dc2626', marginBottom: '1rem', fontSize: '0.9rem' }}>{pinError}</div>}
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                                        <button type="button" onClick={() => { setIsRejectModalOpen(false); setRejectReq(null); setRejectionReason(''); setPinVerifiedForReject(false); setPinInput(''); setPinError(''); setIsPinModalOpen(false); }} style={{
+                                            padding: '0.875rem 1.75rem', borderRadius: '14px', border: '1px solid #e2e8f0',
+                                            background: 'white', color: '#475569', fontWeight: 600, cursor: 'pointer'
+                                        }}>
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={confirmPinAndApprove}
+                                            style={{
+                                                padding: '0.875rem 2rem', borderRadius: '14px', border: 'none',
+                                                background: 'linear-gradient(135deg, #f59e0b, #dc2626)', color: 'white', fontWeight: 700,
+                                                cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(245, 158, 11, 0.2)'
+                                            }}
+                                        >
+                                            Verify PIN
+                                        </button>
+                                    </div>
                                 </div>
-                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>Rejection Reason</label>
-                                <textarea
-                                    required
-                                    value={rejectionReason}
-                                    onChange={e => setRejectionReason(e.target.value)}
-                                    placeholder="e.g. Budget constraints, insufficient details..."
-                                    rows={4}
-                                    style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem', resize: 'none', lineHeight: '1.6' }}
-                                />
+                            ) : (
+                                /* Show Rejection Reason */
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <div style={{
+                                        padding: '1rem', borderRadius: '12px', backgroundColor: '#f8fafc',
+                                        border: '1px solid #f1f5f9', marginBottom: '1.5rem'
+                                    }}>
+                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', marginBottom: '4px' }}>Request</div>
+                                        <div style={{ fontWeight: 700, color: '#1e293b' }}>{rejectReq?.title}</div>
+                                    </div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>Reason for Declining</label>
+                                    <textarea
+                                        required
+                                        value={rejectionReason}
+                                        onChange={e => setRejectionReason(e.target.value)}
+                                        placeholder="e.g. Budget constraints, insufficient details..."
+                                        rows={4}
+                                        style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem', resize: 'none', lineHeight: '1.6' }}
+                                        autoFocus
+                                    />
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem' }}>
+                                        <button type="button" onClick={() => { setIsRejectModalOpen(false); setRejectReq(null); setRejectionReason(''); setPinVerifiedForReject(false); setPinInput(''); setPinError(''); }} style={{
+                                            padding: '0.875rem 1.75rem', borderRadius: '14px', border: '1px solid #e2e8f0',
+                                            background: 'white', color: '#475569', fontWeight: 600, cursor: 'pointer'
+                                        }}>
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={handleConfirmRejection}
+                                            style={{
+                                                padding: '0.875rem 2rem', borderRadius: '14px', border: 'none',
+                                                background: '#dc2626', color: 'white', fontWeight: 700,
+                                                cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(220, 38, 38, 0.2)'
+                                            }}
+                                        >
+                                            Submit Decline
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Detail Modal for Requisition or Leave */}
+            {selectedItem && (
+                <div className="modal-overlay" onClick={closeDetail}>
+                    <div className="fade-in" onClick={(e) => e.stopPropagation()} style={{
+                        backgroundColor: 'rgba(255,255,255,0.98)', backdropFilter: 'blur(12px)',
+                        borderRadius: '20px', maxWidth: '720px', width: '100%', padding: '0',
+                        overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+                    }}>
+                        <div style={{ padding: '1.25rem 1.75rem', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#1e293b' }}>{selectedType === 'leave' ? 'Leave Request Details' : 'Requisition Details'}</h3>
+                                <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>{selectedType === 'leave' ? 'Full details for this leave request' : 'Full details for this requisition'}</p>
+                            </div>
+                            <button onClick={closeDetail} style={{ width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div style={{ padding: '1.5rem', maxHeight: '70vh', overflowY: 'auto' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                <div>
+                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Department</div>
+                                    <div style={{ fontWeight: 700, color: '#1e293b' }}>{selectedItem.department || '—'}</div>
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Employee</div>
+                                    <div style={{ fontWeight: 700, color: '#1e293b' }}>{selectedItem.employeeName || `${selectedItem.employeeFName || ''} ${selectedItem.employeeLName || ''}`.trim() || '—'}</div>
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Email</div>
+                                    <div style={{ color: '#475569' }}>{employeeDetails?.email || '—'}</div>
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Phone</div>
+                                    <div style={{ color: '#475569' }}>{employeeDetails?.phone || '—'}</div>
+                                </div>
                             </div>
 
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                                <button type="button" onClick={() => { setIsRejectModalOpen(false); setRejectReq(null); setRejectionReason(''); }} style={{
-                                    padding: '0.875rem 1.75rem', borderRadius: '14px', border: '1px solid #e2e8f0',
-                                    background: 'white', color: '#475569', fontWeight: 600, cursor: 'pointer'
-                                }}>
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleConfirmRejection}
-                                    style={{
-                                        padding: '0.875rem 2rem', borderRadius: '14px', border: 'none',
-                                        background: '#dc2626', color: 'white', fontWeight: 700,
-                                        cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(220, 38, 38, 0.2)'
-                                    }}
-                                >
-                                    Confirm Rejection
-                                </button>
+                            {selectedType === 'requisition' ? (
+                                <div>
+                                    <div style={{ marginBottom: '0.75rem' }}>
+                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Title</div>
+                                        <div style={{ fontWeight: 700, color: '#1e293b' }}>{selectedItem.title || '—'}</div>
+                                    </div>
+                                    <div style={{ marginBottom: '0.75rem' }}>
+                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Type</div>
+                                        <div style={{ color: '#475569' }}>{selectedItem.type || '—'}</div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem' }}>
+                                        <div>
+                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Amount</div>
+                                            <div style={{ fontWeight: 700 }}>{selectedItem.amount ? `MK ${parseInt(selectedItem.amount).toLocaleString()}` : '—'}</div>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Submitted</div>
+                                            <div style={{ color: '#475569' }}>{selectedItem.createdAt ? new Date(selectedItem.createdAt).toLocaleDateString() : '—'}</div>
+                                        </div>
+                                    </div>
+                                    <div style={{ marginBottom: '0.75rem' }}>
+                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Description</div>
+                                        <div style={{ color: '#475569', lineHeight: 1.5 }}>{selectedItem.description || '—'}</div>
+                                    </div>
+                                    <div style={{ marginTop: '0.75rem' }}>
+                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Status</div>
+                                        <div style={{ marginTop: '6px' }}><StatusBadge status={selectedItem.status} /></div>
+                                        {selectedItem.status === 'rejected' && selectedItem.rejectionReason && (
+                                            <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'hsl(0, 100%, 98%)', borderRadius: '8px', border: '1px dashed hsl(0, 100%, 90%)' }}>
+                                                <div style={{ fontWeight: 700, color: 'hsl(0, 84%, 45%)' }}>Rejection Reason</div>
+                                                <div style={{ color: '#475569' }}>{selectedItem.rejectionReason}</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div>
+                                    <div style={{ marginBottom: '0.75rem' }}>
+                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Leave Type</div>
+                                        <div style={{ fontWeight: 700, color: '#1e293b' }}>{selectedItem.leaveType || '—'}</div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem' }}>
+                                        <div>
+                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Start</div>
+                                            <div style={{ color: '#475569' }}>{selectedItem.startDate ? new Date(selectedItem.startDate).toLocaleDateString() : '—'}</div>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>End</div>
+                                            <div style={{ color: '#475569' }}>{selectedItem.endDate ? new Date(selectedItem.endDate).toLocaleDateString() : '—'}</div>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Total Days</div>
+                                            <div style={{ color: '#475569' }}>{selectedItem.totalDays || '—'}</div>
+                                        </div>
+                                    </div>
+                                    <div style={{ marginBottom: '0.75rem' }}>
+                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Reason</div>
+                                        <div style={{ color: '#475569', lineHeight: 1.5 }}>{selectedItem.reason || '—'}</div>
+                                    </div>
+                                    <div style={{ marginTop: '0.75rem' }}>
+                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Status</div>
+                                        <div style={{ marginTop: '6px' }}><StatusBadge status={selectedItem.status} /></div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* PIN Modal for Approvals */}
+            {isPinModalOpen && (
+                <div className="modal-overlay" onClick={() => { setIsPinModalOpen(false); setPinReq(null); setPinReqType(null); setPinError(''); }}>
+                    <div className="fade-in" onClick={(e) => e.stopPropagation()} style={{
+                        backgroundColor: 'rgba(255,255,255,0.98)', backdropFilter: 'blur(12px)',
+                        borderRadius: '16px', maxWidth: '420px', width: '100%', padding: '0',
+                        overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+                    }}>
+                        <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#1e293b' }}>Enter Approval PIN</h3>
+                                <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>Confirm your identity to complete this approval.</p>
+                            </div>
+                            <button onClick={() => { setIsPinModalOpen(false); setPinReq(null); setPinReqType(null); setPinError(''); }} style={{ width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div style={{ padding: '1.25rem' }}>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <input
+                                    type="password"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    value={pinInput}
+                                    onChange={(e) => { setPinInput(e.target.value.replace(/[^0-9]/g, '')); setPinError(''); }}
+                                    placeholder="Enter PIN"
+                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '1rem' }}
+                                />
+                                {pinError && <div style={{ color: '#dc2626', marginTop: '8px', fontSize: '0.9rem' }}>{pinError}</div>}
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                                <button onClick={() => { setIsPinModalOpen(false); setPinReq(null); setPinReqType(null); setPinError(''); }} style={{ padding: '0.7rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0', background: 'white', color: '#475569' }}>Cancel</button>
+                                <button onClick={confirmPinAndApprove} style={{ padding: '0.7rem 1rem', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #10b981, #059669)', color: 'white', fontWeight: 700 }}>Confirm</button>
                             </div>
                         </div>
                     </div>

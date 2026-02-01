@@ -134,7 +134,7 @@ function App() {
             </ProtectedRoute>
           } />
           <Route path="/settings" element={
-            <ProtectedRoute allowedRoles={['manager']}>
+            <ProtectedRoute allowedRoles={['manager', 'team_leader']}>
               <Settings />
             </ProtectedRoute>
           } />
