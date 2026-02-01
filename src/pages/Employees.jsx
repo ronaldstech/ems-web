@@ -82,14 +82,14 @@ const Employees = () => {
         role: 'Employee',
         companyId: '', // Changed from department
         phone: '',
-        department: '' // Re-added department for Team Leader logic
+        department: '' // Re-added department for Supervisor logic
     });
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         // If manager/TL is adding, enforce their company ID
         let dataToSave = { ...formData };
-        if (userData?.role === 'manager' || userData?.role === 'team_leader') {
+        if (userData?.role === 'manager' || userData?.role === 'supervisor') {
             dataToSave.companyId = userData.companyId;
         }
 
@@ -166,7 +166,7 @@ const Employees = () => {
     const visibleEmployees = employees.filter(e => {
         if (userRole === 'admin') return true; // Sees everyone
         if (userRole === 'manager') return e.companyId === userCompanyId; // Sees whole company
-        if (userRole === 'team_leader') return e.companyId === userCompanyId && e.department === userDepartment; // Sees only their team
+        if (userRole === 'supervisor') return e.companyId === userCompanyId && e.department === userDepartment; // Sees only their team
         return false;
     });
 
@@ -422,7 +422,7 @@ const Employees = () => {
                                         style={inputStyle}
                                     >
                                         <option value="employee">Employee</option>
-                                        <option value="team_leader">Team Leader</option>
+                                        <option value="supervisor">Supervisor</option>
                                         {userRole === 'admin' && (
                                             <>
                                                 <option value="manager">Manager</option>

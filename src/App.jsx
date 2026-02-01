@@ -94,7 +94,7 @@ function App() {
             </ProtectedRoute>
           } />
           <Route path="/departments" element={
-            <ProtectedRoute allowedRoles={['admin', 'manager', 'team_leader']}>
+            <ProtectedRoute allowedRoles={['admin', 'manager', 'supervisor']}>
               <Departments />
             </ProtectedRoute>
           } />
@@ -104,12 +104,12 @@ function App() {
             </ProtectedRoute>
           } />
           <Route path="/attendance" element={
-            <ProtectedRoute allowedRoles={['manager', 'team_leader', 'employee']}>
+            <ProtectedRoute allowedRoles={['manager', 'supervisor', 'employee']}>
               <Attendance />
             </ProtectedRoute>
           } />
           <Route path="/attendance/history" element={
-            <ProtectedRoute allowedRoles={['manager', 'team_leader', 'employee']}>
+            <ProtectedRoute allowedRoles={['manager', 'supervisor', 'employee']}>
               <AttendanceHistory />
             </ProtectedRoute>
           } />
@@ -119,7 +119,7 @@ function App() {
             </ProtectedRoute>
           } />
           <Route path="/invoices" element={
-            <ProtectedRoute allowedRoles={['admin', 'manager', 'team_leader', 'employee']}>
+            <ProtectedRoute allowedRoles={['admin', 'manager', 'supervisor', 'employee']}>
               <Invoices />
             </ProtectedRoute>
           } />
@@ -129,12 +129,12 @@ function App() {
             </ProtectedRoute>
           } />
           <Route path="/profile" element={
-            <ProtectedRoute allowedRoles={['manager', 'team_leader', 'employee']}>
+            <ProtectedRoute allowedRoles={['manager', 'supervisor', 'employee']}>
               <Profile />
             </ProtectedRoute>
           } />
           <Route path="/settings" element={
-            <ProtectedRoute allowedRoles={['manager', 'team_leader']}>
+            <ProtectedRoute allowedRoles={['manager', 'supervisor']}>
               <Settings />
             </ProtectedRoute>
           } />

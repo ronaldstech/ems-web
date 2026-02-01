@@ -10,7 +10,7 @@ const MyTeam = () => {
         e.departmentId === userData?.departmentId
     );
 
-    const isTeamLeader = (member) => member.role === 'team_leader';
+    const isTeamLeader = (member) => member.role === 'supervisor';
     const isMe = (member) => member.id === userData?.id;
 
     return (
@@ -147,7 +147,7 @@ const MyTeam = () => {
                                         color: '#64748b'
                                     }}
                                 >
-                                    {leader ? 'Team Leader' : member.role}
+                                    {leader ? 'Supervisor' : member.role}
                                 </p>
 
                                 <div

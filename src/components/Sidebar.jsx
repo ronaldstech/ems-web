@@ -6,47 +6,58 @@ import clsx from 'clsx';
 import { useApp } from '../context/AppContext';
 
 const Sidebar = ({ className, onClose }) => {
-  const { logout, user, userData, requisitions } = useApp();
+  const { logout, user, userData, requisitions, leaveRequests } = useApp();
   const navigate = useNavigate();
   const role = userData?.role?.toLowerCase() || 'employee';
 
-  // Calculate pending requisitions badge count
-  const getPendingRequisitionsCount = () => {
-    if (!requisitions || !userData) return 0;
+  // Calculate pending requisitions and leave requests badge count
+  const getPendingCount = () => {
+    if (!userData) return 0;
 
     if (role === 'manager') {
-      return requisitions.filter(req =>
+      const reqCount = (requisitions || []).filter(req =>
         req.companyId === userData.companyId &&
         req.status === 'pending_manager'
       ).length;
+      const leaveCount = (leaveRequests || []).filter(req =>
+        req.companyId === userData.companyId &&
+        req.status === 'pending_manager'
+      ).length;
+      return reqCount + leaveCount;
     }
 
-    if (role === 'team_leader') {
-      return requisitions.filter(req =>
+    if (role === 'supervisor') {
+      const reqCount = (requisitions || []).filter(req =>
         req.companyId === userData.companyId &&
         req.departmentId === userData.departmentId &&
-        req.status === 'pending_leader'
+        req.status === 'pending_supervisor'
       ).length;
+      const leaveCount = (leaveRequests || []).filter(req =>
+        req.companyId === userData.companyId &&
+        req.departmentId === userData.departmentId &&
+        req.status === 'pending_supervisor'
+      ).length;
+      return reqCount + leaveCount;
     }
 
     return 0;
   };
 
-  const pendingCount = getPendingRequisitionsCount();
+  const pendingCount = getPendingCount();
 
 
   const allNavItems = [
-    { to: '/', icon: Home, label: 'Dashboard', roles: ['admin', 'manager', 'team_leader', 'employee', 'contractor'] },
-    { to: '/requisitions', icon: ClipboardList, label: 'Requisitions', roles: ['admin', 'manager', 'team_leader', 'employee'], badge: pendingCount },
+    { to: '/', icon: Home, label: 'Dashboard', roles: ['admin', 'manager', 'supervisor', 'employee', 'contractor'] },
+    { to: '/requisitions', icon: ClipboardList, label: 'Requisitions', roles: ['admin', 'manager', 'supervisor', 'employee'], badge: pendingCount },
     { to: '/attendance', icon: Clock, label: 'Check In/Out', roles: ['employee'], end: true },
-    { to: '/attendance/history', icon: Calendar, label: 'Attendance History', roles: ['manager', 'team_leader', 'employee'] },
+    { to: '/attendance/history', icon: Calendar, label: 'Attendance History', roles: ['manager', 'supervisor', 'employee'] },
     { to: '/my-team', icon: UserCheck, label: 'Team', roles: ['employee'] }, // New
-    { to: '/invoices', icon: FileText, label: 'Invoices', roles: ['admin', 'manager', 'team_leader', 'employee'] }, // Added team_leader
-    { to: '/profile', icon: Users, label: 'Profile', roles: ['manager', 'team_leader', 'employee'] },
-    { to: '/settings', icon: SettingsIcon, label: 'Settings', roles: ['manager', 'team_leader'] },
+    { to: '/invoices', icon: FileText, label: 'Invoices', roles: ['admin', 'manager', 'supervisor', 'employee'] }, // Added supervisor
+    { to: '/profile', icon: Users, label: 'Profile', roles: ['manager', 'supervisor', 'employee'] },
+    { to: '/settings', icon: SettingsIcon, label: 'Settings', roles: ['manager', 'supervisor'] },
     { to: '/companies', icon: Building2, label: 'Companies', roles: ['admin'] },
     { to: '/employees', icon: Users, label: 'Employees', roles: ['admin', 'manager'] },
-    { to: '/departments', icon: ClipboardList, label: 'Departments', roles: ['admin', 'manager', 'team_leader'] },
+    { to: '/departments', icon: ClipboardList, label: 'Departments', roles: ['admin', 'manager', 'supervisor'] },
   ];
 
   const navItems = allNavItems.filter(item => item.roles.includes(role));

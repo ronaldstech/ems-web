@@ -5,11 +5,11 @@ import toast from 'react-hot-toast';
 
 const StatusBadge = ({ status }) => {
     const styles = {
-        pending_leader: {
+        pending_supervisor: {
             bg: 'hsl(214, 100%, 97%)',
             color: 'hsl(214, 95%, 45%)',
             border: 'hsl(214, 90%, 90%)',
-            label: 'Pending Leader'
+            label: 'Pending Supervisor'
         },
         pending_manager: {
             bg: 'hsl(35, 100%, 97%)',
@@ -23,11 +23,11 @@ const StatusBadge = ({ status }) => {
             border: 'hsl(142, 70%, 90%)',
             label: 'Approved'
         },
-        rejected: {
+        declined: {
             bg: 'hsl(0, 100%, 97%)',
             color: 'hsl(0, 84%, 45%)',
             border: 'hsl(0, 100%, 90%)',
-            label: 'Rejected'
+            label: 'Declined'
         }
     };
 
@@ -121,8 +121,8 @@ const RequisitionCard = ({ req, role, user, onEdit, onAction, onView }) => {
                 </p>
             </div>
 
-            {/* Rejection Reason Display */}
-            {req.status === 'rejected' && req.rejectionReason && (
+            {/* Decline Reason Display */}
+            {req.status === 'declined' && req.declineReason && (
                 <div style={{
                     padding: '0.75rem',
                     borderRadius: '10px',
@@ -131,10 +131,10 @@ const RequisitionCard = ({ req, role, user, onEdit, onAction, onView }) => {
                     fontSize: '0.85rem'
                 }}>
                     <div style={{ fontWeight: 700, color: 'hsl(0, 84%, 45%)', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <XCircle size={12} /> Rejection Reason
+                        <XCircle size={12} /> Decline Reason
                     </div>
                     <p style={{ margin: 0, color: 'hsl(0, 50%, 40%)', fontStyle: 'italic' }}>
-                        "{req.rejectionReason}"
+                        "{req.declineReason}"
                     </p>
                 </div>
             )}
@@ -176,8 +176,8 @@ const RequisitionCard = ({ req, role, user, onEdit, onAction, onView }) => {
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    {/* Team Leader Actions */}
-                    {role === 'team_leader' && req.status === 'pending_leader' && (
+                    {/* Supervisor Actions */}
+                    {role === 'supervisor' && req.status === 'pending_supervisor' && (
                         <>
                             <button
                                 onClick={(e) => { e.stopPropagation(); onAction(req, 'approve'); }}
@@ -215,7 +215,7 @@ const RequisitionCard = ({ req, role, user, onEdit, onAction, onView }) => {
                     )}
 
                     {/* Employee Edit */}
-                    {isOwner && req.status === 'pending_leader' && (
+                    {isOwner && req.status === 'pending_supervisor' && (
                         <button
                             onClick={(e) => { e.stopPropagation(); onEdit(req); }}
                             style={{
@@ -238,17 +238,17 @@ const Requisitions = () => {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
     const [rejectReq, setRejectReq] = useState(null);
-    const [rejectionReason, setRejectionReason] = useState('');
-    const [pinVerifiedForReject, setPinVerifiedForReject] = useState(false); // Track if PIN was verified for rejection
+    const [declineReason, setDeclineReason] = useState('');
+    const [pinVerifiedForReject, setPinVerifiedForReject] = useState(false); // Track if PIN was verified for decline
     const [editingId, setEditingId] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
 
-    // PIN modal state for approvals and rejections
+    // PIN modal state for approvals and declines
     const [isPinModalOpen, setIsPinModalOpen] = useState(false);
-    const [pinReq, setPinReq] = useState(null); // the request being approved/rejected
+    const [pinReq, setPinReq] = useState(null); // the request being approved/declined
     const [pinReqType, setPinReqType] = useState(null); // 'requisition' or 'leave'
-    const [pinAction, setPinAction] = useState(null); // 'approve' or 'reject'
+    const [pinAction, setPinAction] = useState(null); // 'approve' or 'decline'
     const [pinInput, setPinInput] = useState('');
     const [pinError, setPinError] = useState('');
 
@@ -285,6 +285,9 @@ const Requisitions = () => {
         const employee = employees?.find(emp => emp.id === selectedItem.employeeId);
         if (employee) {
             setEmployeeDetails({ email: employee.email, phone: employee.phone });
+        } else {
+            // If not found in employees list, try to fetch from leave/requisition data
+            setEmployeeDetails({ email: selectedItem.email || '', phone: selectedItem.phone || '' });
         }
     }, [selectedItem, employees]);
 
@@ -310,7 +313,7 @@ const Requisitions = () => {
     const visibleRequisitions = requisitions.filter(req => {
         if (role === 'admin') return true;
         if (role === 'manager') return req.companyId === userData?.companyId;
-        if (role === 'team_leader') return req.companyId === userData?.companyId && req.departmentId === userData?.departmentId;
+        if (role === 'supervisor') return req.companyId === userData?.companyId && req.departmentId === userData?.departmentId;
         if (role === 'employee') return req.employeeId === user?.uid;
         return false;
     }).filter(req => {
@@ -327,7 +330,7 @@ const Requisitions = () => {
     const visibleLeaveRequests = leaveRequests.filter(req => {
         if (role === 'admin') return true;
         if (role === 'manager') return req.companyId === userData?.companyId;
-        if (role === 'team_leader') return req.companyId === userData?.companyId && req.departmentId === userData?.departmentId;
+        if (role === 'supervisor') return req.companyId === userData?.companyId && req.departmentId === userData?.departmentId;
         if (role === 'employee') return req.employeeId === user?.uid;
         return false;
     }).filter(req => {
@@ -368,7 +371,7 @@ const Requisitions = () => {
                 await updateRequisition(editingId, { ...formData });
             } else {
                 // Determine initial status based on role
-                const initialStatus = role === 'team_leader' ? 'pending_manager' : 'pending_leader';
+                const initialStatus = role === 'supervisor' ? 'pending_manager' : 'pending_supervisor';
 
                 const newReq = {
                     ...formData,
@@ -384,14 +387,15 @@ const Requisitions = () => {
                 await addRequisition(newReq);
             }
             resetForm();
+            toast.success(editingId ? 'Requisition updated successfully' : 'Requisition submitted successfully');
         } catch (error) {
             console.error("Submission error:", error);
         }
     };
 
     const handleAction = async (req, action) => {
-        // Require PIN for both approve and reject for team leaders and managers
-        if ((action === 'approve' || action === 'reject') && (role === 'team_leader' || role === 'manager')) {
+        // Require PIN for both approve and reject for supervisors and managers
+        if ((action === 'approve' || action === 'reject') && (role === 'supervisor' || role === 'manager')) {
             if (!userData?.approvalPin) {
                 toast.error('You must set an approval PIN in Settings before approving or declining requests.');
                 return;
@@ -410,7 +414,7 @@ const Requisitions = () => {
         if (action === 'reject') {
             setRejectReq(req);
             setPinVerifiedForReject(false);
-            setRejectionReason('');
+            setDeclineReason('');
             setIsRejectModalOpen(true);
             return;
         }
@@ -419,7 +423,7 @@ const Requisitions = () => {
 
         let nextStatus = req.status;
         if (action === 'approve') {
-            if (req.status === 'pending_leader') nextStatus = 'pending_manager';
+            if (req.status === 'pending_supervisor') nextStatus = 'pending_manager';
             else if (req.status === 'pending_manager') nextStatus = 'approved';
         }
 
@@ -429,25 +433,25 @@ const Requisitions = () => {
         });
     };
 
-    const handleConfirmRejection = async () => {
-        if (!rejectionReason.trim()) {
-            alert("Please provide a reason for rejection.");
+    const handleConfirmDecline = async () => {
+        if (!declineReason.trim()) {
+            alert("Please provide a reason for decline.");
             return;
         }
 
         try {
             await updateRequisition(rejectReq.id, {
-                status: 'rejected',
-                rejectionReason: rejectionReason.trim(),
+                status: 'declined',
+                declineReason: declineReason.trim(),
                 updatedAt: new Date().toISOString()
             });
             setIsRejectModalOpen(false);
             setRejectReq(null);
-            setRejectionReason('');
+            setDeclineReason('');
             setPinVerifiedForReject(false);
             toast.success('Request has been declined.');
         } catch (error) {
-            console.error("Rejection error:", error);
+            console.error("Decline error:", error);
         }
     };
 
@@ -468,23 +472,23 @@ const Requisitions = () => {
             return;
         }
 
-        // If action is reject, move to rejection reason screen
+        // If action is reject, move to decline reason screen
         if (pinAction === 'reject') {
             setPinVerifiedForReject(true);
             setPinInput('');
             setPinError('');
             setRejectReq(pinReq);
-            setRejectionReason('');
+            setDeclineReason('');
             setIsPinModalOpen(false);
             setIsRejectModalOpen(true);
-            // Keep modal open but will show rejection reason field instead of PIN field
+            // Keep modal open but will show decline reason field instead of PIN field
             return;
         }
 
         try {
             if (pinReqType === 'requisition') {
                 let nextStatus = pinReq.status;
-                if (pinReq.status === 'pending_leader') nextStatus = 'pending_manager';
+                if (pinReq.status === 'pending_supervisor') nextStatus = 'pending_manager';
                 else if (pinReq.status === 'pending_manager') nextStatus = 'approved';
 
                 await updateRequisition(pinReq.id, {
@@ -496,12 +500,12 @@ const Requisitions = () => {
                 const currentDate = new Date().toISOString();
                 const reviewerName = `${userData?.firstName || ''} ${userData?.lastName || ''}`;
 
-                if (role === 'team_leader' && pinReq.status === 'pending_leader') {
+                if (role === 'supervisor' && pinReq.status === 'pending_supervisor') {
                     updateData = {
                         status: 'pending_manager',
-                        teamLeaderApprovedBy: reviewerName,
-                        teamLeaderApprovedAt: currentDate,
-                        teamLeaderComments: 'Approved by Team Leader'
+                        supervisorApprovedBy: reviewerName,
+                        supervisorApprovedAt: currentDate,
+                        supervisorComments: 'Approved by Supervisor'
                     };
                 } else if (role === 'manager' && pinReq.status === 'pending_manager') {
                     updateData = {
@@ -538,7 +542,7 @@ const Requisitions = () => {
             const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
 
             // Determine initial status based on role
-            const initialStatus = role === 'team_leader' ? 'pending_manager' : 'pending_leader';
+            const initialStatus = role === 'supervisor' ? 'pending_manager' : 'pending_supervisor';
 
             await addLeaveRequest({
                 ...leaveFormData,
@@ -551,6 +555,7 @@ const Requisitions = () => {
                 status: initialStatus,
             });
             resetForm();
+            toast.success('Leave request submitted successfully');
         } catch (error) {
             console.error("Error submitting leave request:", error);
         }
@@ -558,8 +563,8 @@ const Requisitions = () => {
 
     const handleLeaveAction = async (req, action) => {
         if (action === 'reject') {
-            // Require PIN for reject for team leaders and managers
-            if (role === 'team_leader' || role === 'manager') {
+            // Require PIN for reject for supervisors and managers
+            if (role === 'supervisor' || role === 'manager') {
                 if (!userData?.approvalPin) {
                     toast.error('You must set an approval PIN in Settings before declining requests.');
                     return;
@@ -576,13 +581,13 @@ const Requisitions = () => {
             // For other roles, reject without PIN
             setRejectReq(req);
             setPinVerifiedForReject(false);
-            setRejectionReason('');
+            setDeclineReason('');
             setIsRejectModalOpen(true);
             return;
         }
 
-        // Require approval PIN for team leaders and managers
-        if (action === 'approve' && (role === 'team_leader' || role === 'manager')) {
+        // Require approval PIN for supervisors and managers
+        if (action === 'approve' && (role === 'supervisor' || role === 'manager')) {
             if (!userData?.approvalPin) {
                 toast.error('You must set an approval PIN in Settings before approving requests.');
                 return;
@@ -603,13 +608,13 @@ const Requisitions = () => {
             const reviewerName = `${userData?.firstName || ''} ${userData?.lastName || ''}`;
 
             if (action === 'approve') {
-                // Team Leader approval: escalate to manager
-                if (role === 'team_leader' && req.status === 'pending_leader') {
+                // Supervisor approval: escalate to manager
+                if (role === 'supervisor' && req.status === 'pending_supervisor') {
                     updateData = {
                         status: 'pending_manager',
-                        teamLeaderApprovedBy: reviewerName,
-                        teamLeaderApprovedAt: currentDate,
-                        teamLeaderComments: 'Approved by Team Leader'
+                        supervisorApprovedBy: reviewerName,
+                        supervisorApprovedAt: currentDate,
+                        supervisorComments: 'Approved by Supervisor'
                     };
                 }
                 // Manager approval: final approval
@@ -724,7 +729,7 @@ const Requisitions = () => {
                     }}
                 >
                     <Calendar size={18} />
-                    Leave Requests
+                    Leave Requests {visibleLeaveRequests.length > 0 && <span style={{ background: '#2563eb', color: 'white', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700 }}>{visibleLeaveRequests.length}</span>}
                 </button>
                 <button
                     onClick={() => setActiveTab('requisitions')}
@@ -746,7 +751,7 @@ const Requisitions = () => {
                     }}
                 >
                     <FileText size={18} />
-                    Requisitions
+                    Requisitions {visibleRequisitions.length > 0 && <span style={{ background: '#2563eb', color: 'white', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700 }}>{visibleRequisitions.length}</span>}
                 </button>
             </div>
 
@@ -794,7 +799,7 @@ const Requisitions = () => {
                     scrollbarWidth: 'none',
                     flex: '0 1 auto'
                 }}>
-                    {['all', 'pending_leader', 'pending_manager', 'approved', 'rejected'].map(status => (
+                    {['all', 'pending_supervisor', 'pending_manager', 'approved', 'declined'].map(status => (
                         <button
                             key={status}
                             onClick={() => setFilterStatus(status)}
@@ -904,7 +909,7 @@ const Requisitions = () => {
 
                                     {/* Action Buttons - Hierarchical Approval Logic */}
                                     {(
-                                        (role === 'team_leader' && req.status === 'pending_leader') ||
+                                        (role === 'supervisor' && req.status === 'pending_supervisor') ||
                                         (role === 'manager' && req.status === 'pending_manager')
                                     ) && (
                                             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9' }}>
@@ -1202,7 +1207,7 @@ const Requisitions = () => {
                 </div>
             )}
 
-            {/* Rejection Modal - PIN Entry or Reason */}
+            {/* Decline Modal - PIN Entry or Reason */}
             {(isRejectModalOpen || (isPinModalOpen && pinAction === 'reject' && pinVerifiedForReject)) && (
                 <div className="modal-overlay">
                     <div className="fade-in" style={{
@@ -1224,7 +1229,7 @@ const Requisitions = () => {
                                     {pinVerifiedForReject ? 'Please provide a reason for declining this request' : 'Enter your PIN to decline this request'}
                                 </p>
                             </div>
-                            <button onClick={() => { setIsRejectModalOpen(false); setRejectReq(null); setRejectionReason(''); setPinVerifiedForReject(false); setPinInput(''); setPinError(''); setIsPinModalOpen(false); }} style={{
+                            <button onClick={() => { setIsRejectModalOpen(false); setRejectReq(null); setDeclineReason(''); setPinVerifiedForReject(false); setPinInput(''); setPinError(''); setIsPinModalOpen(false); }} style={{
                                 width: '36px', height: '36px', borderRadius: '10px',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b'
@@ -1233,8 +1238,8 @@ const Requisitions = () => {
                             </button>
                         </div>
                         <div style={{ padding: '2rem' }}>
-                            {/* Show PIN entry for manager/team_leader */}
-                            {!pinVerifiedForReject && (role === 'team_leader' || role === 'manager') ? (
+                            {/* Show PIN entry for manager/supervisor */}
+                            {!pinVerifiedForReject && (role === 'supervisor' || role === 'manager') ? (
                                 <div style={{ marginBottom: '1.5rem' }}>
                                     <div style={{
                                         padding: '1rem', borderRadius: '12px', backgroundColor: '#f8fafc',
@@ -1256,7 +1261,7 @@ const Requisitions = () => {
                                     />
                                     {pinError && <div style={{ color: '#dc2626', marginBottom: '1rem', fontSize: '0.9rem' }}>{pinError}</div>}
                                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                                        <button type="button" onClick={() => { setIsRejectModalOpen(false); setRejectReq(null); setRejectionReason(''); setPinVerifiedForReject(false); setPinInput(''); setPinError(''); setIsPinModalOpen(false); }} style={{
+                                        <button type="button" onClick={() => { setIsRejectModalOpen(false); setRejectReq(null); setDeclineReason(''); setPinVerifiedForReject(false); setPinInput(''); setPinError(''); setIsPinModalOpen(false); }} style={{
                                             padding: '0.875rem 1.75rem', borderRadius: '14px', border: '1px solid #e2e8f0',
                                             background: 'white', color: '#475569', fontWeight: 600, cursor: 'pointer'
                                         }}>
@@ -1275,7 +1280,7 @@ const Requisitions = () => {
                                     </div>
                                 </div>
                             ) : (
-                                /* Show Rejection Reason */
+                                /* Show Decline Reason */
                                 <div style={{ marginBottom: '1.5rem' }}>
                                     <div style={{
                                         padding: '1rem', borderRadius: '12px', backgroundColor: '#f8fafc',
@@ -1287,22 +1292,22 @@ const Requisitions = () => {
                                     <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.6rem' }}>Reason for Declining</label>
                                     <textarea
                                         required
-                                        value={rejectionReason}
-                                        onChange={e => setRejectionReason(e.target.value)}
+                                        value={declineReason}
+                                        onChange={e => setDeclineReason(e.target.value)}
                                         placeholder="e.g. Budget constraints, insufficient details..."
                                         rows={4}
                                         style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem', resize: 'none', lineHeight: '1.6' }}
                                         autoFocus
                                     />
                                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem' }}>
-                                        <button type="button" onClick={() => { setIsRejectModalOpen(false); setRejectReq(null); setRejectionReason(''); setPinVerifiedForReject(false); setPinInput(''); setPinError(''); }} style={{
+                                        <button type="button" onClick={() => { setIsRejectModalOpen(false); setRejectReq(null); setDeclineReason(''); setPinVerifiedForReject(false); setPinInput(''); setPinError(''); }} style={{
                                             padding: '0.875rem 1.75rem', borderRadius: '14px', border: '1px solid #e2e8f0',
                                             background: 'white', color: '#475569', fontWeight: 600, cursor: 'pointer'
                                         }}>
                                             Cancel
                                         </button>
                                         <button
-                                            onClick={handleConfirmRejection}
+                                            onClick={handleConfirmDecline}
                                             style={{
                                                 padding: '0.875rem 2rem', borderRadius: '14px', border: 'none',
                                                 background: '#dc2626', color: 'white', fontWeight: 700,
@@ -1383,10 +1388,10 @@ const Requisitions = () => {
                                     <div style={{ marginTop: '0.75rem' }}>
                                         <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Status</div>
                                         <div style={{ marginTop: '6px' }}><StatusBadge status={selectedItem.status} /></div>
-                                        {selectedItem.status === 'rejected' && selectedItem.rejectionReason && (
+                                        {selectedItem.status === 'declined' && selectedItem.declineReason && (
                                             <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'hsl(0, 100%, 98%)', borderRadius: '8px', border: '1px dashed hsl(0, 100%, 90%)' }}>
-                                                <div style={{ fontWeight: 700, color: 'hsl(0, 84%, 45%)' }}>Rejection Reason</div>
-                                                <div style={{ color: '#475569' }}>{selectedItem.rejectionReason}</div>
+                                                <div style={{ fontWeight: 700, color: 'hsl(0, 84%, 45%)' }}>Decline Reason</div>
+                                                <div style={{ color: '#475569' }}>{selectedItem.declineReason}</div>
                                             </div>
                                         )}
                                     </div>

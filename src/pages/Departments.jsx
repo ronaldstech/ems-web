@@ -13,14 +13,14 @@ const Departments = () => {
 
     const [formData, setFormData] = useState({
         name: '',
-        teamLeaderId: '',
+        supervisorId: '',
         description: ''
     });
 
     // --- Scoping ---
     const userRole = userData?.role?.toLowerCase() || 'employee';
     const isManager = userRole === 'manager' || userRole === 'admin';
-    const isTL = userRole === 'team_leader';
+    const isTL = userRole === 'supervisor';
     const userCompanyId = userData?.companyId;
 
     // Filter departments based on role
@@ -30,7 +30,7 @@ const Departments = () => {
             ? departments.filter(d => d.companyId === userCompanyId)
             : departments.filter(d =>
                 d.companyId === userCompanyId &&
-                (d.name === userData?.department || d.teamLeaderId === userData?.id)
+                (d.name === userData?.department || d.supervisorId === userData?.id)
             );
 
     // Filter employees based on role (for assignment)
@@ -65,29 +65,29 @@ const Departments = () => {
                 toast.success('New department created');
             }
 
-            // Sync Team Leader Data (CORRECT)
+            // Sync Supervisor Data (CORRECT)
             // === TEAM LEADER ENFORCEMENT ===
-            if (data.teamLeaderId && deptId) {
+            if (data.supervisorId && deptId) {
 
                 // 1. Remove this leader from any previous department
                 const previousDept = companyDepartments.find(
-                    d => d.teamLeaderId === data.teamLeaderId && d.id !== deptId
+                    d => d.supervisorId === data.supervisorId && d.id !== deptId
                 );
 
                 if (previousDept) {
                     await updateDepartment(previousDept.id, {
-                        teamLeaderId: ''
+                        supervisorId: ''
                     });
                 }
 
                 // 2. Update department with new leader
                 await updateDepartment(deptId, {
-                    teamLeaderId: data.teamLeaderId
+                    supervisorId: data.supervisorId
                 });
 
                 // 3. Update leader document
-                await updateEmployee(data.teamLeaderId, {
-                    role: 'team_leader',
+                await updateEmployee(data.supervisorId, {
+                    role: 'supervisor',
                     departmentId: deptId,
                     department: data.name
                 });
@@ -103,7 +103,7 @@ const Departments = () => {
     const handleEdit = (dept) => {
         setFormData({
             name: dept.name,
-            teamLeaderId: dept.teamLeaderId || '',
+            supervisorId: dept.supervisorId || '',
             description: dept.description || ''
         });
         setEditingId(dept.id);
@@ -111,7 +111,7 @@ const Departments = () => {
     };
 
     const resetForm = () => {
-        setFormData({ name: '', teamLeaderId: '', description: '' });
+        setFormData({ name: '', supervisorId: '', description: '' });
         setEditingId(null);
         setIsFormOpen(false);
     };
@@ -233,8 +233,8 @@ const Departments = () => {
 
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', backgroundColor: '#f8fafc', borderRadius: '8px', fontSize: '0.85rem' }}>
                                 <Users size={14} color="#64748b" />
-                                <span style={{ fontWeight: 600, color: '#475569' }}>Team Leader:</span>
-                                <span style={{ color: '#1e293b' }}>{getLeaderName(dept.teamLeaderId)}</span>
+                                <span style={{ fontWeight: 600, color: '#475569' }}>Supervisor:</span>
+                                <span style={{ color: '#1e293b' }}>{getLeaderName(dept.supervisorId)}</span>
                             </div>
                         </div>
 
@@ -300,10 +300,10 @@ const Departments = () => {
                                 />
                             </div>
                             <div style={{ marginBottom: '1.5rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>Assign Team Leader</label>
+                                <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>Assign Supervisor</label>
                                 <select
-                                    value={formData.teamLeaderId}
-                                    onChange={(e) => setFormData({ ...formData, teamLeaderId: e.target.value })}
+                                    value={formData.supervisorId}
+                                    onChange={(e) => setFormData({ ...formData, supervisorId: e.target.value })}
                                     style={{
                                         width: '100%',
                                         padding: '0.75rem',
@@ -361,7 +361,7 @@ const Departments = () => {
 
                         <div style={{ padding: '1.5rem', overflowY: 'auto' }}>
                             {companyEmployees
-                                .filter(emp => emp.role?.toLowerCase() !== 'manager' && emp.id !== viewingDept.teamLeaderId)
+                                .filter(emp => emp.role?.toLowerCase() !== 'manager' && emp.id !== viewingDept.supervisorId)
                                 .map(emp => {
                                     const isMember = emp.departmentId === viewingDept.id;
                                     const assignedElsewhere = emp.departmentId && !isMember;

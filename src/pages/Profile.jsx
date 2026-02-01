@@ -343,7 +343,7 @@ const Profile = () => {
                                 <label>Role / Position</label>
                                 <select name="role" value={formData.role} disabled style={{ background: '#f8fafc', cursor: 'not-allowed', color: '#64748b' }}>
                                     <option value="employee">Employee</option>
-                                    <option value="team_leader">Team Leader</option>
+                                    <option value="supervisor">Supervisor</option>
                                     <option value="manager">Manager</option>
                                 </select>
                             </div>

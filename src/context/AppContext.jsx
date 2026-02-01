@@ -269,7 +269,7 @@ export const AppProvider = ({ children }) => {
     const addRequisition = async (requisition) => {
         try {
             await addDoc(collection(db, 'requisitions'), {
-                status: 'pending_leader',
+                status: 'pending_supervisor',
                 ...requisition,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()

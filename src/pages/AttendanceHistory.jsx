@@ -73,7 +73,7 @@ const AttendanceHistory = () => {
         }
 
         // Header Logic
-        const showDept = (role === 'manager' && deptFilter) || (role === 'team_leader');
+        const showDept = (role === 'manager' && deptFilter) || (role === 'supervisor');
         const activeDept = showDept ? (departments.find(d => d.id === (deptFilter || userData?.departmentId))?.name) : null;
 
         doc.setFontSize(26);
@@ -168,7 +168,7 @@ const AttendanceHistory = () => {
         if (role === 'manager') {
             // Managers can filter by department if they choose
             isVisible = deptFilter ? record.departmentId === deptFilter : true;
-        } else if (role === 'team_leader') {
+        } else if (role === 'supervisor') {
             // Leaders are locked to their department
             isVisible = record.departmentId === userData?.departmentId;
         } else if (role === 'employee') {

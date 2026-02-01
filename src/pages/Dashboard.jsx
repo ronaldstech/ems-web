@@ -110,7 +110,7 @@ const AdminDashboard = () => {
     );
 };
 
-/* --- Team Leader Dashboard (Department Scope) --- */
+/* --- Supervisor Dashboard (Department Scope) --- */
 const TeamLeaderDashboard = () => {
     const { employees, requisitions, userData, attendance, calculateProfileCompletion } = useApp();
     const navigate = useNavigate();
@@ -364,7 +364,7 @@ const Dashboard = () => {
 
     if (role === 'admin') return <AdminDashboard />;
     if (role === 'manager') return <ManagerDashboard />;
-    if (role === 'team_leader') return <TeamLeaderDashboard />;
+    if (role === 'supervisor') return <TeamLeaderDashboard />;
 
     return <EmployeeDashboard userData={userData} />;
 };
