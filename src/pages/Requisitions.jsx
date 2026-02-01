@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Plus, X, Search, CheckCircle, XCircle, Clock, FileText, Ban, Check, DollarSign, Plane, Wallet, Package, Wrench, Monitor, GraduationCap, Calendar, Download } from 'lucide-react';
+import { Plus, X, Search, CheckCircle, XCircle, Clock, FileText, Ban, Check, DollarSign, Plane, Wallet, Package, Wrench, Monitor, GraduationCap, Calendar, Download, Circle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
 
@@ -46,7 +47,7 @@ const StatusBadge = ({ status }) => {
             textTransform: 'uppercase',
             backgroundColor: s.bg,
             color: s.color,
-            border: `1px solid ${s.border}`,
+            border: `1px solid ${s.border} `,
             letterSpacing: '0.025em'
         }}>
             <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: s.color }}></div>
@@ -122,6 +123,39 @@ const RequisitionCard = ({ req, role, user, onEdit, onAction, onView }) => {
                 </p>
             </div>
 
+            {/* Signature Status Indicators */}
+            <div style={{ marginTop: '0.25rem', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {(() => {
+                    const isSupSigned = req.status === 'pending_manager' || req.status === 'approved';
+                    const isMgrSigned = req.status === 'approved';
+
+                    return (
+                        <>
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: '4px',
+                                fontSize: '0.7rem', fontWeight: 600,
+                                color: isSupSigned ? '#059669' : '#94a3b8',
+                                padding: '2px 8px', borderRadius: '4px',
+                                background: isSupSigned ? '#ecfdf5' : '#f1f5f9',
+                                border: '1px solid', borderColor: isSupSigned ? '#a7f3d0' : '#e2e8f0'
+                            }}>
+                                {isSupSigned ? <CheckCircle size={10} /> : <Circle size={10} />} Supervisor
+                            </div>
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: '4px',
+                                fontSize: '0.7rem', fontWeight: 600,
+                                color: isMgrSigned ? '#059669' : '#94a3b8',
+                                padding: '2px 8px', borderRadius: '4px',
+                                background: isMgrSigned ? '#ecfdf5' : '#f1f5f9',
+                                border: '1px solid', borderColor: isMgrSigned ? '#a7f3d0' : '#e2e8f0'
+                            }}>
+                                {isMgrSigned ? <CheckCircle size={10} /> : <Circle size={10} />} Manager
+                            </div>
+                        </>
+                    );
+                })()}
+            </div>
+
             {/* Decline Reason Display */}
             {req.status === 'declined' && req.declineReason && (
                 <div style={{
@@ -148,7 +182,7 @@ const RequisitionCard = ({ req, role, user, onEdit, onAction, onView }) => {
                 <div>
                     <p style={{ margin: '0 0 4px 0', fontSize: '0.7rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase' }}>Amount</p>
                     <p style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#1e293b' }}>
-                        {req.amount ? `MK ${parseInt(req.amount).toLocaleString()}` : '—'}
+                        {req.amount ? `MK ${parseInt(req.amount).toLocaleString()} ` : '—'}
                     </p>
                 </div>
                 <div>
@@ -308,7 +342,7 @@ const RequisitionCard = ({ req, role, user, onEdit, onAction, onView }) => {
 };
 
 const Requisitions = () => {
-    const { requisitions, addRequisition, updateRequisition, leaveRequests, addLeaveRequest, updateLeaveRequest, userData, user, employees } = useApp();
+    const { requisitions, addRequisition, updateRequisition, leaveRequests, addLeaveRequest, updateLeaveRequest, userData, user, employees, companies } = useApp();
     const [activeTab, setActiveTab] = useState('leave'); // 'requisitions' or 'leave'
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
@@ -552,7 +586,7 @@ const Requisitions = () => {
             return;
         }
 
-        if (!confirm(`Are you sure you want to approve this request?`)) return;
+        if (!confirm(`Are you sure you want to approve this request ? `)) return;
 
         let nextStatus = req.status;
         if (action === 'approve') {
@@ -660,14 +694,14 @@ const Requisitions = () => {
                 await updateRequisition(pinReq.id, {
                     status: nextStatus,
                     signature: signatureData,
-                    signedBy: `${userData?.firstName || ''} ${userData?.lastName || ''}`,
+                    signedBy: `${userData?.firstName || ''} ${userData?.lastName || ''} `,
                     signedAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                 });
             } else if (pinReqType === 'leave') {
                 let updateData = {};
                 const currentDate = new Date().toISOString();
-                const reviewerName = `${userData?.firstName || ''} ${userData?.lastName || ''}`;
+                const reviewerName = `${userData?.firstName || ''} ${userData?.lastName || ''} `;
 
                 if (role === 'supervisor' && pinReq.status === 'pending_supervisor') {
                     updateData = {
@@ -768,299 +802,332 @@ const Requisitions = () => {
             const doc = new jsPDF('p', 'mm', 'a4');
             const pageWidth = doc.internal.pageSize.getWidth();
             const pageHeight = doc.internal.pageSize.getHeight();
-            const margin = 15;
-            let yPos = margin;
+            const margin = 20;
 
-            // Header
-            doc.setFontSize(24);
-            doc.setTextColor(37, 99, 235); // Blue
-            doc.text(type === 'leave' ? 'LEAVE REQUEST' : 'REQUISITION', pageWidth / 2, yPos, { align: 'center' });
-            yPos += 10;
+            // Get active company
+            const activeCompany = companies.find(c => c.id === userData?.companyId) || {};
+            const companyName = activeCompany.name || 'ApexSpace';
+            const companyLogo = activeCompany.logoUrl; // Could be URL or Base64 (if proxied)
+            const companyAddress = activeCompany.address || '123 Business Avenue, Lilongwe';
+            const companyEmail = activeCompany.email || 'support@apexspace.com';
+            // Extract phone if available or use default
+            const companyPhone = activeCompany.phone || '+265 999 123 456';
 
-            // Company Info
-            doc.setFontSize(10);
-            doc.setTextColor(100, 116, 139); // Gray
-            doc.text('ApexSpace', margin, yPos);
-            yPos += 5;
-            doc.text(`Ref: ${item.id}`, margin, yPos);
-            yPos += 5;
-            doc.text(`Date: ${new Date().toLocaleDateString()}`, margin, yPos);
-            yPos += 12;
+            const colors = {
+                orange: [214, 110, 15],
+                navy: [15, 23, 42],
+                slate: [100, 116, 139],
+                bg: [248, 250, 252]
+            };
 
-            // Separator line
-            doc.setDrawColor(226, 232, 240);
-            doc.line(margin, yPos, pageWidth - margin, yPos);
-            yPos += 8;
+            // --- 1. HEADER GRAPHICS (The Diagonal Swishes) ---
+            // Large Orange Triangle (Background)
+            doc.setFillColor(...colors.orange);
+            doc.triangle(0, 0, 90, 0, 0, 65, 'F');
 
-            // Section Title
-            doc.setFontSize(12);
-            doc.setTextColor(30, 41, 59); // Dark
-            doc.setFont(undefined, 'bold');
-            doc.text('REQUEST DETAILS', margin, yPos);
-            yPos += 8;
+            // Smaller Navy Triangle (Overlapping)
+            doc.setFillColor(...colors.navy);
+            doc.triangle(0, 0, 50, 0, 0, 45, 'F');
 
-            // Request Details
-            doc.setFont(undefined, 'normal');
-            doc.setFontSize(10);
-            const leftCol = margin;
-            const rightCol = pageWidth / 2;
+            // --- 2. COMPANY BRANDING ---
+            let yPos = 30;
 
-            if (type === 'leave') {
-                doc.setTextColor(100, 116, 139);
-                doc.text('Leave Type:', leftCol, yPos);
-                doc.setTextColor(30, 41, 59);
-                doc.text(item.leaveType || '—', leftCol + 35, yPos);
-
-                doc.setTextColor(100, 116, 139);
-                doc.text('Employee:', rightCol, yPos);
-                doc.setTextColor(30, 41, 59);
-                doc.text(item.employeeName || '—', rightCol + 25, yPos);
-                yPos += 7;
-
-                doc.setTextColor(100, 116, 139);
-                doc.text('Start Date:', leftCol, yPos);
-                doc.setTextColor(30, 41, 59);
-                doc.text(new Date(item.startDate).toLocaleDateString(), leftCol + 35, yPos);
-
-                doc.setTextColor(100, 116, 139);
-                doc.text('End Date:', rightCol, yPos);
-                doc.setTextColor(30, 41, 59);
-                doc.text(new Date(item.endDate).toLocaleDateString(), rightCol + 25, yPos);
-                yPos += 7;
-
-                doc.setTextColor(100, 116, 139);
-                doc.text('Total Days:', leftCol, yPos);
-                doc.setTextColor(30, 41, 59);
-                doc.text(`${item.totalDays} day${item.totalDays !== 1 ? 's' : ''}`, leftCol + 35, yPos);
-
-                doc.setTextColor(100, 116, 139);
-                doc.text('Department:', rightCol, yPos);
-                doc.setTextColor(30, 41, 59);
-                doc.text(item.department || '—', rightCol + 25, yPos);
-                yPos += 7;
-
-                doc.setTextColor(100, 116, 139);
-                doc.text('Status:', leftCol, yPos);
-                doc.setTextColor(30, 41, 59);
-                const statusText = item.status?.charAt(0).toUpperCase() + item.status?.slice(1).replace(/_/g, ' ');
-                doc.text(statusText || '—', leftCol + 35, yPos);
-                yPos += 10;
-
-                if (item.reason) {
-                    doc.setTextColor(100, 116, 139);
-                    doc.text('Reason:', leftCol, yPos);
-                    doc.setTextColor(30, 41, 59);
-                    const reasonLines = doc.splitTextToSize(item.reason, pageWidth - 2 * margin - 35);
-                    doc.text(reasonLines, leftCol + 35, yPos);
-                    yPos += reasonLines.length * 5 + 5;
+            // Logo Icon 
+            if (companyLogo) {
+                try {
+                    // Attempt to add real logo
+                    // Note: jsPDF addImage typically needs a Base64 string for better compatibility, 
+                    // or a proxy if it's a remote URL to avoid CORS. 
+                    // For now, assuming standard addImage behavior for image URLs or if it's pre-fetched.
+                    doc.addImage(companyLogo, 'JPEG', margin, yPos - 8, 12, 12);
+                } catch (err) {
+                    // Fallback to circle
+                    doc.setFillColor(...colors.orange);
+                    doc.circle(margin + 5, yPos - 2, 4, 'F');
                 }
             } else {
-                // Requisition details
-                doc.setTextColor(100, 116, 139);
-                doc.text('Title:', leftCol, yPos);
-                doc.setTextColor(30, 41, 59);
-                doc.text(item.title || '—', leftCol + 35, yPos);
-
-                doc.setTextColor(100, 116, 139);
-                doc.text('Type:', rightCol, yPos);
-                doc.setTextColor(30, 41, 59);
-                doc.text(item.type || '—', rightCol + 25, yPos);
-                yPos += 7;
-
-                doc.setTextColor(100, 116, 139);
-                doc.text('Amount:', leftCol, yPos);
-                doc.setTextColor(30, 41, 59);
-                doc.text(item.amount ? `MK ${parseInt(item.amount).toLocaleString()}` : '—', leftCol + 35, yPos);
-
-                doc.setTextColor(100, 116, 139);
-                doc.text('Status:', rightCol, yPos);
-                doc.setTextColor(30, 41, 59);
-                const statusText = item.status?.charAt(0).toUpperCase() + item.status?.slice(1).replace(/_/g, ' ');
-                doc.text(statusText || '—', rightCol + 25, yPos);
-                yPos += 7;
-
-                doc.setTextColor(100, 116, 139);
-                doc.text('Department:', leftCol, yPos);
-                doc.setTextColor(30, 41, 59);
-                doc.text(item.department || '—', leftCol + 35, yPos);
-
-                doc.setTextColor(100, 116, 139);
-                doc.text('Submitted:', rightCol, yPos);
-                doc.setTextColor(30, 41, 59);
-                doc.text(item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '—', rightCol + 25, yPos);
-                yPos += 10;
-
-                if (item.description) {
-                    doc.setTextColor(100, 116, 139);
-                    doc.text('Description:', leftCol, yPos);
-                    doc.setTextColor(30, 41, 59);
-                    const descLines = doc.splitTextToSize(item.description, pageWidth - 2 * margin - 35);
-                    doc.text(descLines, leftCol + 35, yPos);
-                    yPos += descLines.length * 5 + 5;
-                }
+                // Fallback to circle
+                doc.setFillColor(...colors.orange);
+                doc.circle(margin + 5, yPos - 2, 4, 'F');
             }
 
-            // Check if signature should be displayed
-            const isLeave = type === 'leave';
-            const hasSignature = isLeave
-                ? (item.supervisorSignature || item.managerSignature)
-                : item.signature;
+            doc.setFontSize(22);
+            doc.setTextColor(...colors.navy);
+            doc.setFont('helvetica', 'bold');
+            doc.text(companyName, margin + 15, yPos);
 
-            if (hasSignature) {
-                yPos += 5;
-                // Separator
-                doc.setDrawColor(226, 232, 240);
-                doc.line(margin, yPos, pageWidth - margin, yPos);
-                yPos += 10;
+            // Header Info (Right Aligned)
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...colors.slate);
+            const rightAlign = pageWidth - margin;
 
-                // Signature section
-                doc.setFontSize(12);
-                doc.setTextColor(30, 41, 59);
-                doc.setFont(undefined, 'bold');
-                doc.text('APPROVAL & SIGNATURES', margin, yPos);
-                yPos += 10;
+            let headerY = yPos - 5;
+            const headerLineHeight = 5;
 
-                doc.setFont(undefined, 'normal');
-                doc.setFontSize(10);
-                doc.setTextColor(100, 116, 139);
+            // Prepare header lines: Split address by comma/newline for better stacking
+            const addressLines = companyAddress ? companyAddress.split(/[,;\n]/).map(s => s.trim()).filter(Boolean) : [];
+            const headerInfo = [
+                ...addressLines,
+                companyEmail,
+                companyPhone
+            ].filter(Boolean);
 
-                if (isLeave) {
-                    // LEFT COLUMN: Supervisor
-                    const supX = margin;
-                    // Only show supervisor section if there is approval info
-                    if (item.supervisorSignature || item.supervisorApprovedBy) {
-                        doc.setTextColor(30, 41, 59);
-                        doc.setFont(undefined, 'bold');
-                        doc.text('Supervisor Approval:', supX, yPos);
+            headerInfo.forEach(text => {
+                doc.text(text, rightAlign, headerY, { align: 'right' });
+                headerY += headerLineHeight;
+            });
 
-                        let currentY = yPos + 7;
-                        if (item.supervisorSignature) {
-                            try {
-                                doc.addImage(item.supervisorSignature, 'PNG', supX, currentY, 40, 20);
-                                currentY += 25;
-                            } catch {
-                                console.log('Could not add supervisor signature image');
-                                currentY += 5;
-                            }
-                        } else {
-                            currentY += 5;
-                        }
+            // Adjust yPos based on actual header height if needed, 
+            // though the next section starts at yPos += 35 which is relative to the *initial* yPos (30).
+            // Initial yPos was 30. We started drawing at 25.
+            // If we have many lines (e.g. 5 lines), max Y would be 25 + 20 = 45.
+            // Next section starts at yPos (30) + 35 = 65.
+            // So 45 is well clear of 65. We are safe.
 
-                        doc.setFont(undefined, 'normal');
-                        doc.setTextColor(100, 116, 139);
-                        doc.text('Approved By:', supX, currentY);
-                        doc.setTextColor(30, 41, 59);
-                        doc.text(item.supervisorApprovedBy || '—', supX + 25, currentY);
-                        currentY += 5;
+            yPos += 35;
 
-                        doc.setTextColor(100, 116, 139);
-                        doc.text('Date:', supX, currentY);
-                        doc.setTextColor(30, 41, 59);
-                        doc.text(item.supervisorApprovedAt ? new Date(item.supervisorApprovedAt).toLocaleDateString() : '—', supX + 25, currentY);
-                    }
+            // --- 3. DOCUMENT TITLE ---
+            doc.setFillColor(...colors.navy);
+            doc.rect(margin, yPos, 4, 12, 'F'); // Vertical accent bar
 
-                    // RIGHT COLUMN: Manager
-                    const mgrX = pageWidth / 2 + 10;
-                    // Only show manager section if there is approval info
-                    if (item.managerSignature || item.managerApprovedBy) {
-                        // Reset Y for right column to match left column start
-                        let mgrY = yPos;
+            doc.setFontSize(18);
+            doc.setTextColor(...colors.navy);
+            doc.setFont('helvetica', 'bold');
+            const title = type === 'leave' ? 'LEAVE REQUEST' : 'PURCHASE REQUISITION';
+            doc.text(title, margin + 8, yPos + 9);
 
-                        doc.setTextColor(30, 41, 59);
-                        doc.setFont(undefined, 'bold');
-                        doc.text('Manager Approval:', mgrX, mgrY);
+            // Date Label
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            const dateStr = new Date().toLocaleDateString();
+            doc.text(`DATE: ${dateStr} `, rightAlign, yPos + 9, { align: 'right' });
 
-                        mgrY += 7;
-                        if (item.managerSignature) {
-                            try {
-                                doc.addImage(item.managerSignature, 'PNG', mgrX, mgrY, 40, 20);
-                                mgrY += 25;
-                            } catch {
-                                console.log('Could not add manager signature image');
-                                mgrY += 5;
-                            }
-                        } else {
-                            mgrY += 5;
-                        }
+            yPos += 20;
 
-                        doc.setFont(undefined, 'normal');
-                        doc.setTextColor(100, 116, 139);
-                        doc.text('Approved By:', mgrX, mgrY);
-                        doc.setTextColor(30, 41, 59);
-                        doc.text(item.managerApprovedBy || '—', mgrX + 25, mgrY);
-                        mgrY += 5;
+            // --- 4. DATA SECTION ---
+            // Calculate Box Height based on content
+            let boxHeight = 60;
+            if (item.reason || item.description) boxHeight += 20;
 
-                        doc.setTextColor(100, 116, 139);
-                        doc.text('Date:', mgrX, mgrY);
-                        doc.setTextColor(30, 41, 59);
-                        doc.text(item.managerApprovedAt ? new Date(item.managerApprovedAt).toLocaleDateString() : '—', mgrX + 25, mgrY);
-                    }
+            doc.setFillColor(...colors.bg);
+            doc.roundedRect(margin, yPos, pageWidth - (margin * 2), boxHeight, 2, 2, 'F');
 
-                    // Advance yPos for next section (take max height)
-                    yPos += 45;
+            doc.setFontSize(10);
+            let rowY = yPos + 12;
+            const col1X = margin + 5;
+            const col2X = pageWidth / 2 + 10;
 
+            const addRow = (label, value, x, y) => {
+                doc.setTextColor(...colors.slate);
+                doc.setFont('helvetica', 'bold');
+                doc.text(label, x, y);
+                doc.setTextColor(...colors.navy);
+                doc.setFont('helvetica', 'normal');
+                doc.text(String(value), x + 35, y);
+            };
+
+            if (type === 'leave') {
+                // Row 1
+                addRow('EMPLOYEE', item.employeeName || 'N/A', col1X, rowY);
+                addRow('DEPT', item.department || 'N/A', col2X, rowY);
+                rowY += 10;
+
+                // Row 2
+                addRow('LEAVE TYPE', item.leaveType?.toUpperCase() || 'N/A', col1X, rowY);
+                addRow('STATUS', item.status?.toUpperCase() || 'PENDING', col2X, rowY);
+                rowY += 10;
+
+                // Row 3
+                addRow('START DATE', new Date(item.startDate).toLocaleDateString(), col1X, rowY);
+                addRow('END DATE', new Date(item.endDate).toLocaleDateString(), col2X, rowY);
+                rowY += 10;
+
+                // Row 4
+                addRow('TOTAL DAYS', `${item.totalDays} Day(s)`, col1X, rowY);
+                if (item.remainingDays !== undefined) {
+                    addRow('REMAINING', `${item.remainingDays} Day(s)`, col2X, rowY);
                 } else {
-                    // Original Single Signature Logic for Requisitions
-                    const signatureImage = item.signature;
-                    const approvedBy = item.signedBy;
-                    const approvedAt = item.signedAt;
+                    // If remaining days not in item, show APPLIED DATE instead
+                    addRow('APPLIED ON', item.requestedAt ? new Date(item.requestedAt).toLocaleDateString() : '—', col2X, rowY);
+                }
+                rowY += 10;
 
-                    if (signatureImage) {
-                        try {
-                            doc.addImage(signatureImage, 'PNG', margin, yPos, 40, 20);
-                            yPos += 25;
-                        } catch {
-                            console.log('Could not add signature image');
-                        }
-                    }
+                // Reason Section
+                if (item.reason) {
+                    doc.setDrawColor(226, 232, 240);
+                    doc.line(margin + 5, rowY, pageWidth - margin - 5, rowY);
+                    rowY += 8;
 
-                    doc.setTextColor(30, 41, 59);
-                    doc.text('Approved By:', margin, yPos);
-                    doc.text(approvedBy || '—', margin + 35, yPos);
-                    yPos += 7;
+                    doc.setTextColor(...colors.slate);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('REASON:', col1X, rowY);
 
-                    doc.setTextColor(100, 116, 139);
-                    doc.text('Date:', margin, yPos);
-                    doc.setTextColor(30, 41, 59);
-                    doc.text(approvedAt ? new Date(approvedAt).toLocaleDateString() : '—', margin + 35, yPos);
+                    doc.setTextColor(...colors.navy);
+                    doc.setFont('helvetica', 'normal');
+                    const reasonText = doc.splitTextToSize(item.reason, pageWidth - (margin * 2) - 30);
+                    doc.text(reasonText, col1X + 25, rowY);
+                }
+
+            } else {
+                // Requisition Layout
+                // Row 1
+                addRow('REQUESTER', `${item.employeeFName} ${item.employeeLName} `, col1X, rowY);
+                addRow('DEPT', item.department || 'N/A', col2X, rowY);
+                rowY += 10;
+
+                // Row 2
+                addRow('CATEGORY', item.type || 'General', col1X, rowY);
+                addRow('STATUS', item.status?.toUpperCase() || 'PENDING', col2X, rowY);
+                rowY += 10;
+
+                // Row 3
+                addRow('AMOUNT', `MK ${parseInt(item.amount).toLocaleString()} `, col1X, rowY);
+                addRow('APPLIED ON', item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '—', col2X, rowY);
+                rowY += 10;
+
+                // Description Section
+                if (item.description) {
+                    doc.setDrawColor(226, 232, 240);
+                    doc.line(margin + 5, rowY, pageWidth - margin - 5, rowY);
+                    rowY += 8;
+
+                    doc.setTextColor(...colors.slate);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('DESC:', col1X, rowY);
+
+                    doc.setTextColor(...colors.navy);
+                    doc.setFont('helvetica', 'normal');
+                    const descText = doc.splitTextToSize(item.description, pageWidth - (margin * 2) - 30);
+                    doc.text(descText, col1X + 25, rowY);
                 }
             }
 
-            // Decline reason if applicable
-            if (item.status === 'declined' && item.declineReason) {
-                yPos += 10;
-                doc.setDrawColor(226, 232, 240);
-                doc.line(margin, yPos, pageWidth - margin, yPos);
-                yPos += 10;
+            yPos += boxHeight + 20;
 
-                doc.setFontSize(12);
-                doc.setTextColor(220, 38, 38); // Red for decline
-                doc.setFont(undefined, 'bold');
-                doc.text('DECLINE REASON', margin, yPos);
-                yPos += 8;
+            // --- 5. AUTHORIZATION ---
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...colors.orange);
+            doc.text('OFFICIAL AUTHORIZATION', margin, yPos);
+            doc.line(margin, yPos + 2, margin + 40, yPos + 2);
 
-                doc.setFont(undefined, 'normal');
-                doc.setFontSize(10);
-                doc.setTextColor(100, 116, 139);
-                const reasonLines = doc.splitTextToSize(item.declineReason, pageWidth - 2 * margin);
-                doc.text(reasonLines, margin, yPos);
+            yPos += 12;
+
+            if (type === 'leave') {
+                // --- Dual Signatures for Leave ---
+                const supX = margin;
+                const mgrX = pageWidth / 2 + 10;
+                const boxWidth = 80;
+                const boxHeight = 40;
+
+                // Supervisor Box
+                doc.setDrawColor(230, 230, 230);
+                doc.setFillColor(255, 255, 255);
+                doc.roundedRect(supX, yPos, boxWidth, boxHeight, 2, 2, 'FD');
+
+                doc.setFontSize(7);
+                doc.setTextColor(...colors.slate);
+                doc.text('SUPERVISOR APPROVAL', supX + 5, yPos + 8);
+
+                if (item.supervisorSignature) {
+                    try {
+                        doc.addImage(item.supervisorSignature, 'PNG', supX + 5, yPos + 10, 35, 18);
+                    } catch { }
+                }
+
+                doc.setFontSize(9);
+                doc.setTextColor(...colors.navy);
+                doc.setFont('helvetica', 'bold');
+                doc.text(item.supervisorApprovedBy || 'Pending', supX + 5, yPos + 32);
+
+                doc.setFontSize(7);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(...colors.slate);
+                if (item.supervisorApprovedAt) {
+                    doc.text(new Date(item.supervisorApprovedAt).toLocaleDateString(), supX + 5, yPos + 37);
+                }
+
+
+                // Manager Box
+                doc.setDrawColor(230, 230, 230);
+                doc.setFillColor(255, 255, 255);
+                doc.roundedRect(mgrX, yPos, boxWidth, boxHeight, 2, 2, 'FD');
+
+                doc.setFontSize(7);
+                doc.setTextColor(...colors.slate);
+                doc.text('MANAGER APPROVAL', mgrX + 5, yPos + 8);
+
+                if (item.managerSignature) {
+                    try {
+                        doc.addImage(item.managerSignature, 'PNG', mgrX + 5, yPos + 10, 35, 18);
+                    } catch { }
+                }
+
+                doc.setFontSize(9);
+                doc.setTextColor(...colors.navy);
+                doc.setFont('helvetica', 'bold');
+                doc.text(item.managerApprovedBy || 'Pending', mgrX + 5, yPos + 32);
+
+                doc.setFontSize(7);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(...colors.slate);
+                if (item.managerApprovedAt) {
+                    doc.text(new Date(item.managerApprovedAt).toLocaleDateString(), mgrX + 5, yPos + 37);
+                }
+
+            } else {
+                // --- Single Signature for Requisitions ---
+                const boxWidth = 90;
+                const boxHeight = 40;
+
+                doc.setDrawColor(230, 230, 230);
+                doc.setFillColor(255, 255, 255);
+                doc.roundedRect(margin, yPos, boxWidth, boxHeight, 2, 2, 'FD');
+
+                doc.setFontSize(7);
+                doc.setTextColor(...colors.slate);
+                doc.text('AUTHORIZED BY', margin + 5, yPos + 8);
+
+                if (item.signature) {
+                    try {
+                        doc.addImage(item.signature, 'PNG', margin + 5, yPos + 10, 35, 18);
+                    } catch { }
+                }
+
+                doc.setFontSize(9);
+                doc.setTextColor(...colors.navy);
+                doc.setFont('helvetica', 'bold');
+                doc.text(item.signedBy || 'Pending', margin + 5, yPos + 32);
+
+                doc.setFontSize(7);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(...colors.slate);
+                if (item.signedAt) {
+                    doc.text(new Date(item.signedAt).toLocaleDateString(), margin + 5, yPos + 37);
+                }
             }
 
-            // Footer
-            yPos = pageHeight - 10;
-            doc.setFontSize(8);
-            doc.setTextColor(148, 163, 184); // Light gray
-            doc.text(`Generated on ${new Date().toLocaleString()} | ApexSpace`, pageWidth / 2, yPos, { align: 'center' });
+            // --- 6. FOOTER GRAPHICS ---
+            // Large Orange Triangle (Bottom Right)
+            doc.setFillColor(...colors.orange);
+            doc.triangle(pageWidth, pageHeight, pageWidth - 80, pageHeight, pageWidth, pageHeight - 60, 'F');
 
-            // Download PDF
-            const fileName = type === 'leave' ? `leave-request-${item.id}.pdf` : `requisition-${item.id}.pdf`;
-            doc.save(fileName);
-            toast.success('PDF downloaded successfully.');
+            // Smaller Navy Triangle (Bottom Right)
+            doc.setFillColor(...colors.navy);
+            doc.triangle(pageWidth, pageHeight, pageWidth - 45, pageHeight, pageWidth, pageHeight - 35, 'F');
+
+            // Footer Text
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(8);
+            doc.text('ApexSpace Solutions', pageWidth - 10, pageHeight - 8, { align: 'right' });
+
+            doc.save(`${type} -${item.id.substring(0, 6)}.pdf`);
         } catch (error) {
-            console.error('Error generating PDF:', error);
-            toast.error('Failed to generate PDF.');
+            console.error("PDF Error:", error);
         }
     };
+
 
     const handleLeaveSubmit = async (e) => {
         e.preventDefault();
@@ -1077,7 +1144,7 @@ const Requisitions = () => {
             await addLeaveRequest({
                 ...leaveFormData,
                 employeeId: user?.uid,
-                employeeName: `${userData.firstName || ''} ${userData.lastName || ''}`,
+                employeeName: `${userData.firstName || ''} ${userData.lastName || ''} `,
                 companyId: userData.companyId,
                 departmentId: userData.departmentId,
                 department: userData.department || '',
@@ -1135,7 +1202,7 @@ const Requisitions = () => {
         try {
             let updateData = {};
             const currentDate = new Date().toISOString();
-            const reviewerName = `${userData?.firstName || ''} ${userData?.lastName || ''}`;
+            const reviewerName = `${userData?.firstName || ''} ${userData?.lastName || ''} `;
 
             if (action === 'approve') {
                 // Supervisor approval: escalate to manager
@@ -1378,7 +1445,7 @@ const Requisitions = () => {
                         gap: '1.5rem'
                     }}>
                         {visibleLeaveRequests.map((req, idx) => (
-                            <div key={req.id} style={{ animationDelay: `${idx * 0.05}s` }} className="fade-in">
+                            <div key={req.id} style={{ animationDelay: `${idx * 0.05} s` }} className="fade-in">
                                 <div onClick={() => openDetail(req, 'leave')} style={{
                                     background: 'white',
                                     borderRadius: '20px',
@@ -1435,6 +1502,39 @@ const Requisitions = () => {
                                                 {req.reason}
                                             </p>
                                         )}
+
+                                        {/* Signature Status Indicators */}
+                                        <div style={{ marginTop: '0.75rem', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                            {(() => {
+                                                const isSupSigned = !!req.supervisorSignature || req.status === 'pending_manager' || req.status === 'approved';
+                                                const isMgrSigned = !!req.managerSignature || req.status === 'approved';
+
+                                                return (
+                                                    <>
+                                                        <div style={{
+                                                            display: 'flex', alignItems: 'center', gap: '4px',
+                                                            fontSize: '0.7rem', fontWeight: 600,
+                                                            color: isSupSigned ? '#059669' : '#94a3b8',
+                                                            padding: '2px 8px', borderRadius: '4px',
+                                                            background: isSupSigned ? '#ecfdf5' : '#f1f5f9',
+                                                            border: '1px solid', borderColor: isSupSigned ? '#a7f3d0' : '#e2e8f0'
+                                                        }}>
+                                                            {isSupSigned ? <CheckCircle size={10} /> : <Circle size={10} />} Supervisor
+                                                        </div>
+                                                        <div style={{
+                                                            display: 'flex', alignItems: 'center', gap: '4px',
+                                                            fontSize: '0.7rem', fontWeight: 600,
+                                                            color: isMgrSigned ? '#059669' : '#94a3b8',
+                                                            padding: '2px 8px', borderRadius: '4px',
+                                                            background: isMgrSigned ? '#ecfdf5' : '#f1f5f9',
+                                                            border: '1px solid', borderColor: isMgrSigned ? '#a7f3d0' : '#e2e8f0'
+                                                        }}>
+                                                            {isMgrSigned ? <CheckCircle size={10} /> : <Circle size={10} />} Manager
+                                                        </div>
+                                                    </>
+                                                );
+                                            })()}
+                                        </div>
                                     </div>
 
                                     {/* Decline Reason Display */}
@@ -1560,7 +1660,7 @@ const Requisitions = () => {
                         gap: '1.5rem'
                     }}>
                         {visibleRequisitions.map((req, idx) => (
-                            <div key={req.id} style={{ animationDelay: `${idx * 0.05}s` }} className="fade-in">
+                            <div key={req.id} style={{ animationDelay: `${idx * 0.05} s` }} className="fade-in">
                                 <RequisitionCard
                                     req={req}
                                     role={role}
@@ -1923,7 +2023,7 @@ const Requisitions = () => {
                                 </div>
                                 <div>
                                     <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Employee</div>
-                                    <div style={{ fontWeight: 700, color: '#1e293b' }}>{selectedItem.employeeName || `${selectedItem.employeeFName || ''} ${selectedItem.employeeLName || ''}`.trim() || '—'}</div>
+                                    <div style={{ fontWeight: 700, color: '#1e293b' }}>{selectedItem.employeeName || `${selectedItem.employeeFName || ''} ${selectedItem.employeeLName || ''} `.trim() || '—'}</div>
                                 </div>
                                 <div>
                                     <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Email</div>
@@ -1948,7 +2048,7 @@ const Requisitions = () => {
                                     <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem' }}>
                                         <div>
                                             <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Amount</div>
-                                            <div style={{ fontWeight: 700 }}>{selectedItem.amount ? `MK ${parseInt(selectedItem.amount).toLocaleString()}` : '—'}</div>
+                                            <div style={{ fontWeight: 700 }}>{selectedItem.amount ? `MK ${parseInt(selectedItem.amount).toLocaleString()} ` : '—'}</div>
                                         </div>
                                         <div>
                                             <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Submitted</div>
