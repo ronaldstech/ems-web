@@ -89,9 +89,7 @@ function App() {
             </ProtectedRoute>
           } />
           <Route path="/companies" element={
-            <ProtectedRoute allowedRoles={['admin']}>
               <Companies />
-            </ProtectedRoute>
           } />
           <Route path="/departments" element={
             <ProtectedRoute allowedRoles={['admin', 'manager', 'supervisor']}>

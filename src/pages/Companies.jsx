@@ -106,9 +106,12 @@ const Companies = () => {
                 alignItems: 'flex-end',
                 marginBottom: '2.5rem',
                 borderBottom: '1px solid #f1f5f9',
-                paddingBottom: '1.5rem'
+                paddingBottom: '1.5rem',
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                gap: '1rem'
             }}>
-                <div>
+                <div style={{ flex: '1 1 300px' }}>
                     <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.025em', margin: 0 }}>Entities</h2>
                     <p style={{ color: '#64748b', marginTop: '0.25rem', fontSize: '0.95rem' }}>Overview and management of registered corporate partners.</p>
                 </div>
@@ -127,7 +130,8 @@ const Companies = () => {
                             border: 'none',
                             fontWeight: 600,
                             cursor: 'pointer',
-                            boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.2)'
+                            boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.2)',
+                            width: 'auto'
                         }}
                     >
                         <Plus size={18} /> Add New Company
@@ -137,8 +141,8 @@ const Companies = () => {
 
             {/* Main Table Container */}
             <div className="table-card">
-                <div className="table-header">
-                    <div className="search-input-wrapper">
+                <div className="table-header" style={{ flexWrap: 'wrap' }}>
+                    <div className="search-input-wrapper" style={{ flex: '1 1 300px' }}>
                         <Search size={18} color="#94a3b8" />
                         <input
                             type="text"
@@ -177,52 +181,62 @@ const Companies = () => {
                             ) : (
                                 filteredCompanies.map((company) => (
                                     <tr key={company.id} className="row-hover">
-                                        <td>
-                                            <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '0.95rem' }}>{company.name}</div>
-                                            <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
-                                                <MapPin size={12} /> {company.address || 'No address provided'}
+                                        <td data-label="Company Details">
+                                            <div>
+                                                <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '0.95rem' }}>{company.name}</div>
+                                                <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                                                    <MapPin size={12} /> {company.address || 'No address provided'}
+                                                </div>
                                             </div>
                                         </td>
-                                        <td>
-                                            <div
-                                                onClick={() => setViewingCompany(company)}
-                                                style={{
-                                                    display: 'inline-flex', alignItems: 'center', gap: '6px',
-                                                    padding: '4px 10px', borderRadius: '20px',
-                                                    backgroundColor: '#eff6ff', color: '#3b82f6',
-                                                    fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
-                                                    transition: 'all 0.2s'
-                                                }}
-                                                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#dbeafe'}
-                                                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#eff6ff'}
-                                            >
-                                                <Users size={14} />
-                                                {getEmployeeCount(company.id)}
+                                        <td data-label="Staff">
+                                            <div>
+                                                <div
+                                                    onClick={() => setViewingCompany(company)}
+                                                    style={{
+                                                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                                        padding: '4px 10px', borderRadius: '20px',
+                                                        backgroundColor: '#eff6ff', color: '#3b82f6',
+                                                        fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
+                                                        transition: 'all 0.2s'
+                                                    }}
+                                                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#dbeafe'}
+                                                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#eff6ff'}
+                                                >
+                                                    <Users size={14} />
+                                                    {getEmployeeCount(company.id)}
+                                                </div>
                                             </div>
                                         </td>
-                                        <td>
-                                            <StatusBadge status={company.status} />
-                                        </td>
-                                        <td>
-                                            <div style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '8px',
-                                                fontSize: '0.85rem',
-                                                fontFamily: 'JetBrains Mono, monospace',
-                                                color: '#475569'
-                                            }}>
-                                                <Hash size={14} color="#94a3b8" />
-                                                {company.registrationNumber}
+                                        <td data-label="Status">
+                                            <div>
+                                                <StatusBadge status={company.status} />
                                             </div>
                                         </td>
-                                        <td>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '0.85rem' }}>
-                                                <Mail size={14} />
-                                                {company.email}
+                                        <td data-label="Registration">
+                                            <div>
+                                                <div style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '8px',
+                                                    fontSize: '0.85rem',
+                                                    fontFamily: 'JetBrains Mono, monospace',
+                                                    color: '#475569'
+                                                }}>
+                                                    <Hash size={14} color="#94a3b8" />
+                                                    {company.registrationNumber}
+                                                </div>
                                             </div>
                                         </td>
-                                        <td style={{ textAlign: 'right' }}>
+                                        <td data-label="Contact">
+                                            <div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '0.85rem' }}>
+                                                    <Mail size={14} />
+                                                    {company.email}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td data-label="Actions" style={{ textAlign: 'right' }}>
                                             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                                                 <button
                                                     onClick={() => setViewingCompany(company)}

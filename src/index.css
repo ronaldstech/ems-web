@@ -356,6 +356,63 @@ tr:hover td {
   background-color: #fbfcfd;
 }
 
+/* Responsive Table Styles */
+@media (max-width: 768px) {
+  .data-table, 
+  .data-table thead, 
+  .data-table tbody, 
+  .data-table th, 
+  .data-table td, 
+  .data-table tr {
+    display: block;
+    width: 100%;
+  }
+
+  .data-table thead {
+    display: none; /* Hide headers on mobile */
+  }
+
+  .data-table tr {
+    margin-bottom: 1.5rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 1rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  }
+
+  .data-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-align: right;
+    padding: 0.75rem 0.5rem;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .data-table td:last-child {
+    border-bottom: none;
+  }
+
+  .data-table td::before {
+    content: attr(data-label);
+    float: left;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    color: #64748b;
+    margin-right: 1rem;
+    text-align: left;
+  }
+
+  .data-table td > div {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+}
+
 /* Animations */
 @keyframes fadeIn {
   from {
