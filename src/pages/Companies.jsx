@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import toast from 'react-hot-toast';
 import { Plus, Edit2, Trash2, X, Search, CheckCircle, XCircle, AlertTriangle, Building2, Mail, Hash, MapPin, Users, Eye, Loader2 } from 'lucide-react';
 
 const StatusBadge = ({ status }) => {
@@ -61,6 +62,20 @@ const Companies = () => {
         } catch (error) {
             console.error("Error saving company:", error);
             // In a real app, you'd show a toast error here
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleCompanyDelete = async (id) => {
+        setIsSubmitting(true);
+        try {
+            await deleteCompany(id);
+            setDeletingId(null);
+            toast.success('Company deleted successfully');
+        } catch (error) {
+            console.error("Error deleting company:", error);
+            toast.error('Failed to delete company');
         } finally {
             setIsSubmitting(false);
         }
@@ -446,12 +461,20 @@ const Companies = () => {
                                 This will permanently remove the company from the system. This action cannot be undone.
                             </p>
                             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '2rem' }}>
-                                <button onClick={() => setDeletingId(null)} style={{ ...cancelBtnStyle, flex: 1 }}>Cancel</button>
+                                <button onClick={() => setDeletingId(null)} style={{ ...cancelBtnStyle, flex: 1 }} disabled={isSubmitting}>Cancel</button>
                                 <button
-                                    onClick={() => { deleteCompany(deletingId); setDeletingId(null); }}
-                                    style={{ ...submitBtnStyle, backgroundColor: '#ef4444', flex: 1 }}
+                                    onClick={() => handleCompanyDelete(deletingId)}
+                                    style={{ ...submitBtnStyle, backgroundColor: '#ef4444', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                    disabled={isSubmitting}
                                 >
-                                    Yes, Delete
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader2 size={18} className="animate-spin" />
+                                            Deleting...
+                                        </>
+                                    ) : (
+                                        'Yes, Delete'
+                                    )}
                                 </button>
                             </div>
                         </div>

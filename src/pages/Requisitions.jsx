@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Plus, X, Search, CheckCircle, XCircle, Clock, FileText, Ban, Check, DollarSign, Plane, Wallet, Package, Wrench, Monitor, GraduationCap, Calendar, Download, Circle } from 'lucide-react';
+import { Plus, X, Search, CheckCircle, XCircle, Clock, FileText, Ban, Check, DollarSign, Plane, Wallet, Package, Wrench, Monitor, GraduationCap, Calendar, Download, Circle, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
 
@@ -401,6 +401,7 @@ const Requisitions = () => {
     const [pinAction, setPinAction] = useState(null); // 'approve' or 'decline'
     const [pinInput, setPinInput] = useState('');
     const [pinError, setPinError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // E-Signature modal state
     const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
@@ -580,6 +581,7 @@ const Requisitions = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setIsSubmitting(true);
         if (!userData) return;
 
         try {
@@ -606,6 +608,9 @@ const Requisitions = () => {
             toast.success(editingId ? 'Requisition updated successfully' : 'Requisition submitted successfully');
         } catch (error) {
             console.error("Submission error:", error);
+            toast.error('Failed to submit requisition');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -662,6 +667,8 @@ const Requisitions = () => {
             return;
         }
 
+        setIsSubmitting(true);
+
         try {
             const declineData = {
                 status: 'declined',
@@ -687,6 +694,8 @@ const Requisitions = () => {
         } catch (error) {
             console.error("Decline error:", error);
             toast.error('Failed to decline request. Please try again.');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -740,6 +749,8 @@ const Requisitions = () => {
             alert('Please provide your signature');
             return;
         }
+
+        setIsSubmitting(true);
 
         try {
             if (pinReqType === 'requisition') {
@@ -808,6 +819,8 @@ const Requisitions = () => {
         } catch (err) {
             console.error('Error completing approval with signature', err);
             toast.error('Failed to complete approval. Please try again.');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -1977,9 +1990,19 @@ const Requisitions = () => {
                                     color: 'white',
                                     fontWeight: 700,
                                     cursor: 'pointer',
-                                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
-                                }}>
-                                    {activeTab === 'leave' ? 'Submit Leave Request' : (editingId ? 'Update Request' : 'Submit Requisition')}
+                                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                }} disabled={isSubmitting}>
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader2 size={18} className="animate-spin" />
+                                            {activeTab === 'leave' ? 'Submitting...' : 'Saving...'}
+                                        </>
+                                    ) : (
+                                        activeTab === 'leave' ? 'Submit Leave Request' : (editingId ? 'Update Request' : 'Submit Requisition')
+                                    )}
                                 </button>
                             </div>
                         </form>
@@ -2091,10 +2114,19 @@ const Requisitions = () => {
                                             style={{
                                                 padding: '0.875rem 2rem', borderRadius: '14px', border: 'none',
                                                 background: '#dc2626', color: 'white', fontWeight: 700,
-                                                cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(220, 38, 38, 0.2)'
+                                                cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(220, 38, 38, 0.2)',
+                                                display: 'flex', alignItems: 'center', gap: '8px'
                                             }}
+                                            disabled={isSubmitting}
                                         >
-                                            Submit Decline
+                                            {isSubmitting ? (
+                                                <>
+                                                    <Loader2 size={18} className="animate-spin" />
+                                                    Declining...
+                                                </>
+                                            ) : (
+                                                'Submit Decline'
+                                            )}
                                         </button>
                                     </div>
                                 </div>
@@ -2356,10 +2388,19 @@ const Requisitions = () => {
                                     style={{
                                         padding: '0.875rem 2rem', borderRadius: '14px', border: 'none',
                                         background: 'linear-gradient(135deg, #10b981, #059669)', color: 'white', fontWeight: 700,
-                                        cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.2)'
+                                        cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.2)',
+                                        display: 'flex', alignItems: 'center', gap: '8px'
                                     }}
+                                    disabled={isSubmitting}
                                 >
-                                    Sign & Approve
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader2 size={18} className="animate-spin" />
+                                            Processing...
+                                        </>
+                                    ) : (
+                                        'Sign & Approve'
+                                    )}
                                 </button>
                             </div>
                         </div>

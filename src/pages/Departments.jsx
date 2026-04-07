@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { toast } from 'react-hot-toast';
-import { Plus, Edit2, Trash2, X, Search, Users, Building2, ChevronRight, UserPlus, Check, FileText } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Search, Users, Building2, ChevronRight, UserPlus, Check, FileText, Loader2 } from 'lucide-react';
 
 const Departments = () => {
     const { departments, employees, userData, addDepartment, updateDepartment, deleteDepartment, updateEmployee } = useApp();
@@ -10,6 +10,7 @@ const Departments = () => {
     const [editingId, setEditingId] = useState(null);
     const [deletingId, setDeletingId] = useState(null);
     const [viewingDept, setViewingDept] = useState(null); // For members modal
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -40,6 +41,7 @@ const Departments = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setIsSubmitting(true);
 
         // Basic validation: must have a company context
         const finalCompanyId = userCompanyId || (editingId ? companyDepartments.find(d => d.id === editingId)?.companyId : '');
@@ -55,6 +57,9 @@ const Departments = () => {
         };
 
         try {
+            const oldDept = editingId ? companyDepartments.find(d => d.id === editingId) : null;
+            const oldSupervisorId = oldDept?.supervisorId;
+
             let deptId = editingId;
             if (editingId) {
                 await updateDepartment(editingId, data);
@@ -65,38 +70,72 @@ const Departments = () => {
                 toast.success('New department created');
             }
 
-            // Sync Supervisor Data (CORRECT)
-            // === TEAM LEADER ENFORCEMENT ===
-            if (data.supervisorId && deptId) {
-
-                // 1. Remove this leader from any previous department
-                const previousDept = companyDepartments.find(
-                    d => d.supervisorId === data.supervisorId && d.id !== deptId
-                );
-
-                if (previousDept) {
-                    await updateDepartment(previousDept.id, {
-                        supervisorId: ''
+            // Sync Supervisor Data
+            if (deptId) {
+                // 1. If supervisor changed, or department deleted, etc.
+                // We handle replacement first
+                if (oldSupervisorId && oldSupervisorId !== data.supervisorId) {
+                    await updateEmployee(oldSupervisorId, {
+                        role: 'employee',
+                        departmentId: '',
+                        department: ''
                     });
                 }
 
-                // 2. Update department with new leader
-                await updateDepartment(deptId, {
-                    supervisorId: data.supervisorId
-                });
+                // 2. Handle the NEW supervisor
+                if (data.supervisorId) {
+                    // Remove this leader from any other department they might be leading
+                    const otherDept = companyDepartments.find(
+                        d => d.supervisorId === data.supervisorId && d.id !== deptId
+                    );
 
-                // 3. Update leader document
-                await updateEmployee(data.supervisorId, {
-                    role: 'supervisor',
-                    departmentId: deptId,
-                    department: data.name
-                });
+                    if (otherDept) {
+                        await updateDepartment(otherDept.id, {
+                            supervisorId: ''
+                        });
+                    }
+
+                    // Update their employee record
+                    await updateEmployee(data.supervisorId, {
+                        role: 'supervisor',
+                        departmentId: deptId,
+                        department: data.name
+                    });
+                }
             }
 
             resetForm();
         } catch (error) {
             console.error("Error saving department:", error);
             toast.error('Failed to save department details.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDepartmentDelete = async (id) => {
+        setIsSubmitting(true);
+        try {
+            const deptToDelete = companyDepartments.find(d => d.id === id);
+            const supervisorId = deptToDelete?.supervisorId;
+
+            await deleteDepartment(id);
+
+            if (supervisorId) {
+                await updateEmployee(supervisorId, {
+                    role: 'employee',
+                    departmentId: '',
+                    department: ''
+                });
+            }
+
+            setDeletingId(null);
+            toast.success('Department deleted successfully');
+        } catch (error) {
+            console.error("Error deleting department:", error);
+            toast.error('Failed to delete department');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -335,9 +374,16 @@ const Departments = () => {
 
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                                <button type="button" onClick={resetForm} style={{ padding: '0.7rem 1.2rem', borderRadius: '10px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer' }}>Cancel</button>
-                                <button type="submit" style={{ padding: '0.7rem 1.2rem', borderRadius: '10px', border: 'none', background: '#2563eb', color: 'white', fontWeight: 600, cursor: 'pointer' }}>
-                                    {editingId ? 'Save Changes' : 'Create Department'}
+                                <button type="button" onClick={resetForm} style={{ padding: '0.7rem 1.2rem', borderRadius: '10px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer' }} disabled={isSubmitting}>Cancel</button>
+                                <button type="submit" style={{ padding: '0.7rem 1.2rem', borderRadius: '10px', border: 'none', background: '#2563eb', color: 'white', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }} disabled={isSubmitting}>
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader2 size={18} className="animate-spin" />
+                                            {editingId ? 'Saving...' : 'Creating...'}
+                                        </>
+                                    ) : (
+                                        editingId ? 'Save Changes' : 'Create Department'
+                                    )}
                                 </button>
                             </div>
                         </form>
@@ -361,7 +407,7 @@ const Departments = () => {
 
                         <div style={{ padding: '1.5rem', overflowY: 'auto' }}>
                             {companyEmployees
-                                .filter(emp => emp.role?.toLowerCase() !== 'manager' && emp.id !== viewingDept.supervisorId)
+                                .filter(emp => emp.role?.toLowerCase() === 'employee' && emp.id !== viewingDept.supervisorId)
                                 .map(emp => {
                                     const isMember = emp.departmentId === viewingDept.id;
                                     const assignedElsewhere = emp.departmentId && !isMember;
@@ -450,22 +496,27 @@ const Departments = () => {
                             <button
                                 onClick={() => setDeletingId(null)}
                                 style={{ flex: 1, padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600 }}
+                                disabled={isSubmitting}
                             >
                                 Cancel
                             </button>
                             <button
-                                onClick={async () => {
-                                    try {
-                                        await deleteDepartment(deletingId);
-                                        toast.success('Department deleted');
-                                    } catch (err) {
-                                        toast.error('Failed to delete department');
-                                    }
-                                    setDeletingId(null);
+                                onClick={() => handleDepartmentDelete(deletingId)}
+                                style={{
+                                    flex: 1, padding: '0.75rem', borderRadius: '10px', border: 'none',
+                                    background: '#ef4444', color: 'white', cursor: 'pointer', fontWeight: 600,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                                 }}
-                                style={{ flex: 1, padding: '0.75rem', borderRadius: '10px', border: 'none', background: '#ef4444', color: 'white', cursor: 'pointer', fontWeight: 600 }}
+                                disabled={isSubmitting}
                             >
-                                Delete
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader2 size={18} className="animate-spin" />
+                                        Deleting...
+                                    </>
+                                ) : (
+                                    'Delete'
+                                )}
                             </button>
                         </div>
                     </div>

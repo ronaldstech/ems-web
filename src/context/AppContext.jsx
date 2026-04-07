@@ -226,7 +226,7 @@ export const AppProvider = ({ children }) => {
 
     const addDepartment = async (department) => {
         try {
-            await addDoc(collection(db, 'departments'), {
+            return await addDoc(collection(db, 'departments'), {
                 ...department,
                 createdAt: new Date().toISOString()
             });

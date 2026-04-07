@@ -127,6 +127,7 @@ const Employees = () => {
     };
 
     const handleDelete = async (id) => {
+        setIsSubmitting(true);
         try {
             await deleteEmployee(id);
             toast.success('Employee deleted successfully');
@@ -134,6 +135,8 @@ const Employees = () => {
         } catch (error) {
             console.error("Error deleting employee:", error);
             toast.error('Error deleting employee');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -181,14 +184,14 @@ const Employees = () => {
     );
 
     return (
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '1rem' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
             <header style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'flex-end',
-                marginBottom: '2.5rem',
+                marginBottom: '0.5rem',
                 borderBottom: '1px solid #f1f5f9',
-                paddingBottom: '1.5rem'
+                paddingBottom: '0.5rem'
             }}>
                 <div>
                     <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.025em', margin: 0 }}>Employees</h2>
@@ -346,19 +349,23 @@ const Employees = () => {
                                         </td>
                                         <td style={{ padding: '1.25rem 1.5rem', textAlign: 'right' }}>
                                             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                                <button
-                                                    onClick={() => handleEdit(employee)}
-                                                    style={actionBtnStyle('#f1f5f9', '#475569')}
-                                                >
-                                                    <Edit2 size={15} />
-                                                </button>
-                                                {(userRole === 'admin' || userRole === 'manager') && (
-                                                    <button
-                                                        onClick={() => setDeletingId(employee.id)}
-                                                        style={actionBtnStyle('#fef2f2', '#ef4444')}
-                                                    >
-                                                        <Trash2 size={15} />
-                                                    </button>
+                                                {employee.role !== 'manager' && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleEdit(employee)}
+                                                            style={actionBtnStyle('#f1f5f9', '#475569')}
+                                                        >
+                                                            <Edit2 size={15} />
+                                                        </button>
+                                                        {(userRole === 'admin' || userRole === 'manager') && (
+                                                            <button
+                                                                onClick={() => setDeletingId(employee.id)}
+                                                                style={actionBtnStyle('#fef2f2', '#ef4444')}
+                                                            >
+                                                                <Trash2 size={15} />
+                                                            </button>
+                                                        )}
+                                                    </>
                                                 )}
                                             </div>
                                         </td>
@@ -526,13 +533,21 @@ const Employees = () => {
                             <p style={{ color: '#64748b', fontSize: '0.9rem', lineHeight: 1.5 }}>
                                 Are you sure you want to remove this employee? They will lose access immediately.
                             </p>
-                            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '2rem' }}>
-                                <button onClick={() => setDeletingId(null)} style={{ ...cancelBtnStyle, flex: 1 }}>Cancel</button>
+                             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '2rem' }}>
+                                <button onClick={() => setDeletingId(null)} style={{ ...cancelBtnStyle, flex: 1 }} disabled={isSubmitting}>Cancel</button>
                                 <button
-                                    onClick={() => { deleteEmployee(deletingId); setDeletingId(null); }}
-                                    style={{ ...submitBtnStyle, backgroundColor: '#ef4444', flex: 1 }}
+                                    onClick={() => handleDelete(deletingId)}
+                                    style={{ ...submitBtnStyle, backgroundColor: '#ef4444', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                    disabled={isSubmitting}
                                 >
-                                    Remove
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader2 size={18} className="animate-spin" />
+                                            Removing...
+                                        </>
+                                    ) : (
+                                        'Remove'
+                                    )}
                                 </button>
                             </div>
                         </div>

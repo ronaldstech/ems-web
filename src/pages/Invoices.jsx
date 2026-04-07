@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Plus, X, Search, FileText, Download, Send, Trash2, Eye, PlusCircle, MinusCircle } from 'lucide-react';
+import { Plus, X, Search, FileText, Download, Send, Trash2, Eye, PlusCircle, MinusCircle, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
@@ -30,8 +31,10 @@ const Invoices = () => {
     const { invoices, addInvoice, updateInvoice, deleteInvoice, userData, user, companies } = useApp();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState(null);
+    const [deletingId, setDeletingId] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [formData, setFormData] = useState({
         clientName: '',
@@ -91,6 +94,7 @@ const Invoices = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setIsSubmitting(true);
         try {
             const data = {
                 ...formData,
@@ -109,14 +113,39 @@ const Invoices = () => {
                 await addInvoice(data);
             }
             resetForm();
+            toast.success(editingId ? 'Invoice updated!' : 'Invoice created!');
         } catch (error) {
-            console.error("Error saving invoice:", error);
+            console.error("Error submitting invoice:", error);
+            toast.error('Failed to save invoice');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDeleteInvoice = async (id) => {
+        setIsSubmitting(true);
+        try {
+            await deleteInvoice(id);
+            setDeletingId(null);
+            toast.success('Invoice deleted successfully');
+        } catch (error) {
+            console.error("Error deleting invoice:", error);
+            toast.error('Failed to delete invoice');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
     const handleStatusChange = async (inv, newStatus) => {
-        if (confirm(`Change status to ${newStatus}?`)) {
+        setIsSubmitting(true);
+        try {
             await updateInvoice(inv.id, { status: newStatus });
+            toast.success(`Invoice status updated to ${newStatus}`);
+        } catch (error) {
+            console.error("Error updating status:", error);
+            toast.error('Failed to update status');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -504,7 +533,7 @@ const Invoices = () => {
                                             <Send size={18} />
                                         </button>
                                         <button
-                                            onClick={() => deleteInvoice(inv.id)}
+                                            onClick={() => setDeletingId(inv.id)}
                                             style={{
                                                 width: '40px', height: '40px', borderRadius: '12px',
                                                 border: 'none', background: '#fee2e2', color: '#991b1b',
@@ -512,6 +541,7 @@ const Invoices = () => {
                                                 cursor: 'pointer'
                                             }}
                                             title="Delete"
+                                            disabled={isSubmitting}
                                         >
                                             <Trash2 size={18} />
                                         </button>
@@ -658,11 +688,65 @@ const Invoices = () => {
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
-                                <button type="button" onClick={resetForm} style={{ padding: '0.875rem 2.25rem', borderRadius: '16px', border: '1px solid #e2e8f0', background: 'white', color: '#475569', fontWeight: 700, cursor: 'pointer', fontSize: '0.95rem' }}>Cancel</button>
-                                <button type="submit" style={{ padding: '0.875rem 3rem', borderRadius: '16px', border: 'none', background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', color: 'white', fontWeight: 800, cursor: 'pointer', fontSize: '0.95rem', boxShadow: '0 10px 15px -3px rgba(37, 99, 235, 0.2)' }}>Save as Draft</button>
+                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
+                                <button type="button" onClick={resetForm} style={{ padding: '0.875rem 2.25rem', borderRadius: '16px', border: '1px solid #e2e8f0', background: 'white', color: '#475569', fontWeight: 700, cursor: 'pointer', fontSize: '0.95rem' }} disabled={isSubmitting}>Cancel</button>
+                                <button type="submit" style={{ padding: '0.875rem 3rem', borderRadius: '16px', border: 'none', background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', color: 'white', fontWeight: 800, cursor: 'pointer', fontSize: '0.95rem', boxShadow: '0 10px 15px -3px rgba(37, 99, 235, 0.2)', display: 'flex', alignItems: 'center', gap: '8px' }} disabled={isSubmitting}>
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader2 size={18} className="animate-spin" />
+                                            Saving...
+                                        </>
+                                    ) : (
+                                        'Save as Draft'
+                                    )}
+                                </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+            {/* Delete Confirmation Modal */}
+            {deletingId && (
+                <div className="modal-overlay" style={{ zIndex: 1100 }}>
+                    <div className="card" style={{ maxWidth: '400px', width: '100%', padding: '2rem', textAlign: 'center', backgroundColor: 'white', borderRadius: '24px' }}>
+                        <div style={{
+                            width: '60px', height: '60px', borderRadius: '50%', backgroundColor: '#fef2f2',
+                            color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            margin: '0 auto 1.5rem auto'
+                        }}>
+                            <Trash2 size={30} />
+                        </div>
+                        <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.25rem', fontWeight: 800 }}>Delete Invoice?</h3>
+                        <p style={{ color: '#64748b', marginBottom: '2rem', lineHeight: 1.5 }}>
+                            Are you sure you want to delete this invoice? This action cannot be undone.
+                        </p>
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <button
+                                onClick={() => setDeletingId(null)}
+                                style={{ flex: 1, padding: '0.75rem', borderRadius: '12px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 700 }}
+                                disabled={isSubmitting}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => handleDeleteInvoice(deletingId)}
+                                style={{
+                                    flex: 1, padding: '0.75rem', borderRadius: '12px', border: 'none',
+                                    background: '#ef4444', color: 'white', cursor: 'pointer', fontWeight: 700,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                                }}
+                                disabled={isSubmitting}
+                            >
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader2 size={18} className="animate-spin" />
+                                        Deleting...
+                                    </>
+                                ) : (
+                                    'Delete'
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
