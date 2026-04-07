@@ -37,14 +37,24 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   return children;
 };
 
-import { useState } from 'react'; // Add useState
+import { useState, useEffect } from 'react'; // Add useState, useEffect
 import { Menu } from 'lucide-react'; // Add Menu icon
 
 // ... imports ...
 
 function App() {
-  const { user } = useApp();
+  const { user, logout } = useApp();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    let timer;
+    if (user) {
+      timer = setTimeout(() => {
+        logout();
+      }, 43200000);
+    }
+    return () => clearTimeout(timer);
+  }, [user, logout]);
 
   return (
     <div className="layout">
@@ -89,7 +99,7 @@ function App() {
             </ProtectedRoute>
           } />
           <Route path="/companies" element={
-              <Companies />
+            <Companies />
           } />
           <Route path="/departments" element={
             <ProtectedRoute allowedRoles={['admin', 'manager', 'supervisor']}>
