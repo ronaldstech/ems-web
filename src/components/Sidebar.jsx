@@ -56,16 +56,16 @@ const Sidebar = ({ className, onClose }) => {
 
   const allNavItems = [
     { to: '/', icon: Home, label: 'Dashboard', roles: ['admin', 'manager', 'supervisor', 'employee', 'contractor', 'finance_manager'] },
-    { to: '/requisitions', icon: ClipboardList, label: 'Requisitions', roles: ['admin', 'manager', 'supervisor', 'employee', 'finance_manager'], badge: pendingCount },
+    { to: '/requisitions', icon: ClipboardList, label: 'Requisitions', roles: ['manager', 'supervisor', 'employee', 'finance_manager'], badge: pendingCount },
     { to: '/attendance', icon: Clock, label: 'Check In/Out', roles: ['employee'], end: true },
     { to: '/attendance/history', icon: Calendar, label: 'Attendance History', roles: ['manager', 'supervisor', 'employee'] },
     { to: '/my-team', icon: UserCheck, label: 'Team', roles: ['employee'] }, // New
-    { to: '/invoices', icon: FileText, label: 'Invoices', roles: ['admin', 'manager', 'supervisor', 'employee', 'finance_manager'] }, // Added supervisor
+    { to: '/invoices', icon: FileText, label: 'Invoices', roles: ['manager', 'supervisor', 'employee', 'finance_manager'] }, // Added supervisor
     { to: '/profile', icon: Users, label: 'Profile', roles: ['manager', 'supervisor', 'employee', 'finance_manager'] },
     { to: '/settings', icon: SettingsIcon, label: 'Settings', roles: ['manager', 'supervisor', 'finance_manager'] },
     { to: '/companies', icon: Building2, label: 'Companies', roles: ['admin'] },
     { to: '/employees', icon: Users, label: 'Employees', roles: ['admin', 'manager'] },
-    { to: '/departments', icon: ClipboardList, label: 'Departments', roles: ['admin', 'manager', 'supervisor'] },
+    { to: '/departments', icon: ClipboardList, label: 'Departments', roles: ['manager', 'supervisor'] },
   ];
 
   const navItems = allNavItems.filter(item => item.roles.includes(role));

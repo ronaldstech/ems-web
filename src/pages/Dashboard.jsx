@@ -76,7 +76,7 @@ const AdminDashboard = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem' }}>
                 <StatCard title="Global Companies" value={companies.length} icon={Building2} bgGradient="linear-gradient(135deg, #6366f1, #a855f7)" subtitle="Registered business entities" />
-                <StatCard title="Active Employees" value={employees.length} icon={Users} bgGradient="linear-gradient(135deg, #3b82f6, #06b6d4)" subtitle="Total workforce across all depts" />
+                <StatCard title="Active Users" value={employees.length} icon={Users} bgGradient="linear-gradient(135deg, #3b82f6, #06b6d4)" subtitle="Total workforce across all depts" />
                 <StatCard title="System Alerts" value={pendingRequests.length} icon={ClipboardList} bgGradient="linear-gradient(135deg, #f59e0b, #ef4444)" subtitle="Requisitions requiring sync" />
             </div>
 
