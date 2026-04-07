@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Plus, Edit2, Trash2, X, Search, CheckCircle, XCircle, AlertTriangle, Building2, Mail, Hash, MapPin, Users, Eye } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Search, CheckCircle, XCircle, AlertTriangle, Building2, Mail, Hash, MapPin, Users, Eye, Loader2 } from 'lucide-react';
 
 const StatusBadge = ({ status }) => {
     const isActive = status === 'active';
@@ -38,6 +38,7 @@ const Companies = () => {
     const [deletingId, setDeletingId] = useState(null);
     const [viewingCompany, setViewingCompany] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -47,14 +48,22 @@ const Companies = () => {
         status: 'active'
     });
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (editingId) {
-            updateCompany(editingId, formData);
-        } else {
-            addCompany(formData);
+        setIsSubmitting(true);
+        try {
+            if (editingId) {
+                await updateCompany(editingId, formData);
+            } else {
+                await addCompany(formData);
+            }
+            resetForm();
+        } catch (error) {
+            console.error("Error saving company:", error);
+            // In a real app, you'd show a toast error here
+        } finally {
+            setIsSubmitting(false);
         }
-        resetForm();
     };
 
     const handleEdit = (company) => {
@@ -409,9 +418,16 @@ const Companies = () => {
                                 </div>
                             </div>
                             <div style={modalFooterStyle}>
-                                <button type="button" onClick={resetForm} style={cancelBtnStyle}>Discard</button>
-                                <button type="submit" style={submitBtnStyle}>
-                                    {editingId ? 'Update Record' : 'Create Company'}
+                                <button type="button" onClick={resetForm} style={cancelBtnStyle} disabled={isSubmitting}>Discard</button>
+                                <button type="submit" style={{ ...submitBtnStyle, opacity: isSubmitting ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '8px' }} disabled={isSubmitting}>
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader2 size={18} className="animate-spin" />
+                                            {editingId ? 'Updating...' : 'Creating...'}
+                                        </>
+                                    ) : (
+                                        editingId ? 'Update Record' : 'Create Company'
+                                    )}
                                 </button>
                             </div>
                         </form>

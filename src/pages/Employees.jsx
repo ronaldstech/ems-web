@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { toast } from 'react-hot-toast';
-import { Plus, Edit2, Trash2, X, Search, User, Briefcase, Mail, Phone, AlertTriangle, Building2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Search, User, Briefcase, Mail, Phone, AlertTriangle, Building2, Loader2 } from 'lucide-react';
 
 const RoleBadge = ({ role }) => {
     const roles = {
@@ -73,6 +73,7 @@ const Employees = () => {
     const [deletingId, setDeletingId] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedEmployee, setSelectedEmployee] = useState(null); // For detail modal
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const { calculateProfileCompletion } = useApp();
 
     const [formData, setFormData] = useState({
@@ -107,6 +108,7 @@ const Employees = () => {
             }
         }
 
+        setIsSubmitting(true);
         try {
             if (editingId) {
                 await updateEmployee(editingId, dataToSave);
@@ -119,6 +121,8 @@ const Employees = () => {
         } catch (error) {
             console.error("Error saving employee:", error);
             toast.error(error.message || 'Error saving employee');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -495,9 +499,16 @@ const Employees = () => {
                             </div>
 
                             <div style={modalFooterStyle}>
-                                <button type="button" onClick={resetForm} style={cancelBtnStyle}>Cancel</button>
-                                <button type="submit" style={submitBtnStyle}>
-                                    {editingId ? 'Save Changes' : 'Add Employee'}
+                                <button type="button" onClick={resetForm} style={cancelBtnStyle} disabled={isSubmitting}>Cancel</button>
+                                <button type="submit" style={{ ...submitBtnStyle, opacity: isSubmitting ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '8px' }} disabled={isSubmitting}>
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader2 size={18} className="animate-spin" />
+                                            {editingId ? 'Updating...' : 'Adding...'}
+                                        </>
+                                    ) : (
+                                        editingId ? 'Save Changes' : 'Add Employee'
+                                    )}
                                 </button>
                             </div>
                         </form>
