@@ -68,10 +68,6 @@ const AdminDashboard = () => {
                     <h2 style={{ fontSize: '2rem', fontWeight: 800, margin: 0, color: '#0f172a', letterSpacing: '-0.025em' }}>Admin Control</h2>
                     <p style={{ color: '#64748b', margin: '0.25rem 0 0 0', fontSize: '0.95rem' }}>Full scale oversight of all companies and users.</p>
                 </div>
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <button className="btn btn-outline" onClick={() => navigate('/companies')} style={{ padding: '0.6rem 1.25rem', borderRadius: '10px' }}>Companies</button>
-                    <button className="btn btn-primary" onClick={() => navigate('/employees')} style={{ padding: '0.6rem 1.25rem', borderRadius: '10px' }}>Employees</button>
-                </div>
             </header>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem' }}>
