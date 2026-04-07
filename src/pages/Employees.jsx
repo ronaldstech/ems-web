@@ -421,14 +421,17 @@ const Employees = () => {
                                         onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                                         style={inputStyle}
                                     >
-                                        <option value="employee">Employee</option>
-                                        <option value="supervisor">Supervisor</option>
-                                        <option value="finance_manager">Finance Manager</option>
+                                        {userRole === 'manager' && (
+                                            <>
+                                                <option value="employee">Employee</option>
+                                                <option value="supervisor">Supervisor</option>
+                                                <option value="finance_manager">Finance Manager</option>
+                                            </>
+                                        )}
                                         {userRole === 'admin' && (
                                             <>
                                                 <option value="manager">Manager</option>
                                                 <option value="admin">Admin</option>
-                                                <option value="contractor">Contractor</option>
                                             </>
                                         )}
                                     </select>
