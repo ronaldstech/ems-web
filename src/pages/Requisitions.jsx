@@ -449,7 +449,7 @@ const Requisitions = () => {
         if (!selectedItem) return;
         const onKey = (e) => { if (e.key === 'Escape') closeDetail(); };
         window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener(onKey);
+        return () => window.removeEventListener('keydown', onKey);
     }, [selectedItem]);
 
     // Fetch employee details (email and phone) when modal opens
@@ -1213,7 +1213,7 @@ const Requisitions = () => {
                 doc.roundedRect(mgrX, yPos, boxWidth, boxHeight, 2, 2, 'FD');
                 doc.setFontSize(7);
                 doc.setTextColor(...colors.slate);
-                doc.text('COMPANY MNGR', mgrX + 5, yPos + 8);
+                doc.text('COMPANY MANAGER', mgrX + 5, yPos + 8);
                 if (item.managerSignature || item.signature) {
                     try { doc.addImage(item.managerSignature || item.signature, 'PNG', mgrX + 5, yPos + 10, 35, 18); } catch { }
                 }
